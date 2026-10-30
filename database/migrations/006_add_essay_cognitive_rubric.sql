@@ -1,0 +1,3 @@
+ALTER TABLE questions
+  ADD COLUMN IF NOT EXISTS cognitive_level VARCHAR(32),
+  ADD COLUMN IF NOT EXISTS rubric JSONB;

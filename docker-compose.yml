@@ -1,0 +1,41 @@
+services:
+  backend:
+    build: ./backend/api
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/api/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ai_examhub_dau
+      DB_USER: postgres
+      DB_PASSWORD: 123456
+      PORT: 3000
+      JWT_SECRET: examhub-dev-secret-key-change-in-production
+      CORS_ORIGIN: "true"
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ./frontend/web
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ai_examhub_dau
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
