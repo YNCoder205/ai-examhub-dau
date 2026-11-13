@@ -1,0 +1,204 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 3 — KẾT QUẢ, ĐÁNH GIÁ VÀ KẾT LUẬN
+% ---------------------------------------------------------------------
+\chapter{Kết quả, đánh giá và kết luận}
+\label{ch:ketqua}
+
+\begin{muctieu}
+Chương này đối chiếu mục tiêu với sản phẩm đã triển khai, trình bày bằng
+chứng kiểm thử, thảo luận giới hạn và tổng kết hướng phát triển.
+\end{muctieu}
+
+\section{Kết quả đạt được}
+
+Các mục tiêu ở Chương~\ref{ch:modau} được đối chiếu tại
+Bảng~\ref{tab:doichieu}. Sản phẩm hiện bao gồm ứng dụng web, API và lược đồ
+cơ sở dữ liệu; các luồng tạo câu hỏi, lập đề, duyệt đề, thi trực tuyến và
+lớp học có mã nguồn cùng kiểm thử. Thành phần tạo câu hỏi hỗ trợ gọi mô
+hình ngôn ngữ tùy cấu hình và có nhánh dự phòng. Các thành phần này chứng
+minh mức độ hoàn thiện chức năng của nguyên mẫu, không chứng minh chất lượng
+chuyên môn của câu hỏi do máy tạo.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu mục tiêu và kết quả triển khai.}
+\label{tab:doichieu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}p{0.31\textwidth}p{0.53\textwidth}p{0.10\textwidth}}
+\toprule
+\rowcolor{gray100}\bfseries\color{daunavy}Mục tiêu & \bfseries\color{daunavy}Bằng chứng trong dự án & \bfseries\color{daumaroon}Trạng thái \\
+\midrule
+Ứng dụng web nhiều thành phần & React/TypeScript, Express API, PostgreSQL và Docker Compose. & Đạt \\
+Hỗ trợ sinh câu hỏi từ học liệu & Trích xuất PDF/DOCX, tích hợp OpenAI tùy chọn, sinh dự phòng và kiểm tra đầu ra. & Đạt một phần \\
+Quản lý ngân hàng và đề & CRUD câu hỏi/đề, chọn theo loại và độ khó, tạo mã đề, quy trình duyệt. & Đạt \\
+Tổ chức thi và lớp học & Mã phòng/lớp, lưu lượt làm bài, giám sát, tiếp tục bài và tự chấm trắc nghiệm. & Đạt \\
+Kiểm thử chức năng và build & 35/35 bài kiểm thử API đạt; frontend build/type-check thành công. & Đạt \\
+Đánh giá định lượng chất lượng AI & Chưa có tập chuẩn gán nhãn, phép đo chất lượng sinh hoặc benchmark OCR. & Chưa đạt \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\section{Độ đo và bằng chứng kiểm thử}
+
+Vì đồ án không huấn luyện mô hình và chưa có tập kiểm thử chuẩn cho câu hỏi
+hay OCR, không thể báo cáo \en{accuracy}, precision, recall, F1 hoặc độ
+chính xác OCR như kết quả thực nghiệm. Bằng chứng định lượng hiện có là số
+bài kiểm thử phần mềm và kết quả build được trình bày trong
+Bảng~\ref{tab:kiemthu}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả xác minh phần mềm trong lần kiểm tra báo cáo.}
+\label{tab:kiemthu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}p{0.36\textwidth}p{0.36\textwidth}p{0.20\textwidth}}
+\toprule
+\rowcolor{gray100}\bfseries\color{daunavy}Hạng mục & \bfseries\color{daunavy}Kết quả & \bfseries\color{daumaroon}Đánh giá \\
+\midrule
+Kiểm thử API & 35 bài; 35 đạt, 0 lỗi, 0 bỏ qua. & Đạt \\
+Build frontend & TypeScript và Vite build thành công. & Đạt \\
+Sinh câu hỏi không có LLM & Có bài kiểm thử xác nhận nhánh sinh dự phòng trả ứng viên. & Đạt theo kiểm thử chức năng \\
+Chất lượng nội dung AI & Chưa đối chiếu với bộ câu hỏi chuẩn hoặc đánh giá chuyên gia có thang điểm. & Chưa đo \\
+Hiệu năng và tải & Chưa có benchmark thời gian phản hồi hoặc tải đồng thời. & Chưa đo \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Backend trả về trường \code{confidence} theo nhánh xử lý, nhưng giá trị này
+được gán trong mã nguồn và chưa được hiệu chuẩn bằng tập dữ liệu có nhãn.
+Do đó, báo cáo không diễn giải trường này thành xác suất đúng hay chỉ số
+đánh giá mô hình. Kiểm thử tự động tập trung vào cấu trúc đầu ra và nghiệp
+vụ API; giảng viên vẫn cần kiểm tra nội dung câu hỏi, đáp án và bằng chứng
+trước khi đưa vào đề thật.
+
+\subsection{Ma trận kiểm thử chức năng}
+Bảng~\ref{tab:ma-tran-kiem-thu} tóm tắt các nhóm hành vi được kiểm tra
+trong bộ test hiện có. Mục đích là chỉ ra loại lỗi có thể được phát hiện,
+không thay thế báo cáo từng lần chạy của CI. Tất cả 35 test hiện hữu đều
+được thực thi thành công trong lần xác minh. Các yêu cầu không xuất hiện
+trong test hiện hữu được giữ ở trạng thái chưa xác minh.
+\begin{table}[H]
+\centering
+\caption{Ma trận kiểm thử chức năng theo rủi ro nghiệp vụ.}
+\label{tab:ma-tran-kiem-thu}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.12\textwidth} X p{0.28\textwidth}}
+\toprule
+\rowcolor{gray100}Mã & Ca kiểm thử/điều kiện & Kết quả xác minh \\
+\midrule
+T01 & Health check và CORS preflight. & Đạt trong bộ test. \\
+T02 & Cập nhật vai trò người dùng; token hiện hành và quyền được làm mới. & Đạt trong bộ test. \\
+T03 & Sinh viên không truy cập phân tích quản trị; đăng ký công khai không tự cấp teacher/admin. & Đạt trong bộ test. \\
+T04 & CRUD tài khoản quản trị; phân trang và bulk import. & Đạt trong bộ test. \\
+T05 & Tạo, lưu và cập nhật đề; sinh mã đề với đáp án ánh xạ đúng. & Đạt trong bộ test. \\
+T06 & Phân tích tài liệu có câu hỏi/đáp án; dữ liệu rỗng bị từ chối. & Đạt trong bộ test. \\
+T07 & Không có LLM vẫn có ứng viên dự phòng; câu hỏi phải phù hợp văn bản nguồn. & Đạt theo ca hiện có. \\
+T08 & Câu hỏi trắc nghiệm có lựa chọn riêng biệt, đáp án và căn cứ nguồn. & Đạt theo ca hiện có. \\
+T09 & Phòng thi random đề, lưu bài, tự chấm trắc nghiệm và tiếp tục lượt. & Đạt trong bộ test. \\
+T10 & Lớp học: tạo, tham gia bằng mã, danh sách thành viên và kiểm soát quyền. & Đạt trong bộ test. \\
+T11 & OCR tiếng Việt, kiểm thử tải, tương phản/khả năng tiếp cận và trình duyệt thiết bị thật. & Chưa có bằng chứng. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Diễn giải các loại kết quả}
+Kiểm thử API kiểm chứng mã phản hồi, dữ liệu trả về và một phần trạng thái
+PostgreSQL. Kiểm thử tích hợp chạm vào nhiều thành phần cùng lúc, nên có
+thể phát hiện lỗi phối hợp mà test đơn vị của một hàm không phát hiện.
+Tuy vậy, các bài test được viết cho những kịch bản xác định, không bao phủ
+tất cả đầu vào, trình duyệt, nhà cung cấp OAuth hay cấu hình vận hành.
+
+Lệnh build frontend xác nhận TypeScript không báo lỗi trong phạm vi
+project build và bundler đóng gói được các tài nguyên. Nó không đo khả
+năng sử dụng hoặc độ chính xác giao diện. Không có lượt test người dùng
+được tiến hành, do vậy báo cáo không tự đưa ra kết luận về mức độ hài lòng
+hoặc giảm thời gian biên soạn của giảng viên.
+
+\subsection{Thiết kế thực nghiệm đánh giá AI đề xuất}
+Để đánh giá chất lượng sinh câu hỏi trong tương lai, nên lập tập kiểm thử
+đại diện cho nhiều môn và định dạng tài liệu, sau đó giảng viên độc lập
+gán nhãn đúng/sai cho câu hỏi, đáp án, bằng chứng, độ rõ ràng, mức độ phù
+hợp và độ khó. Một phần mẫu nên được hai người chấm để tính mức nhất quán
+liên giám khảo; bất đồng cần có quy trình phân xử. Cần tách tài liệu đã
+dùng để chỉnh prompt khỏi tập đánh giá cuối cùng nhằm hạn chế rò rỉ thông
+tin vào phép đo.
+
+Các câu hỏi trắc nghiệm có thể báo cáo tỷ lệ đáp án đúng được chuyên gia
+xác nhận, tỷ lệ bằng chứng hỗ trợ phát biểu, tỷ lệ lựa chọn hợp lệ và
+độ trùng lặp. Kết quả OCR có thể đo tỷ lệ lỗi ký tự và từ trên ảnh được
+gán nhãn; điểm số OCR không thay cho đánh giá hậu quả của một lỗi OCR lên
+câu hỏi sinh ra. Đánh giá phải phân tầng theo ngôn ngữ, loại tài liệu và
+chất lượng scan, đồng thời công bố số mẫu và khoảng tin cậy.
+
+\begin{table}[H]
+\centering
+\caption{Đề cương đo lường dành cho một đánh giá AI độc lập trong tương lai.}
+\label{tab:ai-eval-plan}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.21\textwidth} X X}
+\toprule
+\rowcolor{gray100}Khía cạnh & Cách đo đề xuất & Đối tượng đánh giá \\
+\midrule
+Độ đúng nội dung & Tỷ lệ phát biểu/đáp án được chuyên gia xác nhận trên tập chưa dùng để phát triển. & Mỗi câu sinh và đáp án. \\
+Bám nguồn & Tỷ lệ câu có bằng chứng nguyên văn, định vị đúng và đủ để hỗ trợ đáp án. & Cặp câu hỏi -- nguồn. \\
+Chất lượng sư phạm & Thang điểm rõ ràng, một đáp án đúng, distractor hợp lý, ngôn ngữ và mức độ nhận thức. & Giảng viên chấm độc lập. \\
+Độ đa dạng & Tỷ lệ trùng lặp nội dung và phân bố ý/chủ đề trong tập câu hỏi. & Tập đề sinh từ nhiều tài liệu. \\
+OCR & Character/Word Error Rate trên ảnh quét có transcript chuẩn. & Từng nhóm ngôn ngữ và chất lượng ảnh. \\
+Độ trễ/chi phí & Thời gian p50/p95, lỗi/time-out và chi phí theo tài liệu/câu hỏi. & Pipeline và từng nhà cung cấp. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Mỗi độ đo cần được báo cáo theo phương pháp đã định trước; không gộp nhiều
+nhà cung cấp hoặc nhiều loại tài liệu thành một con số duy nhất nếu phân bố
+mẫu khác nhau. Trường \code{confidence} hiện được gán theo nhánh xử lý và
+chưa được hiệu chuẩn, nên không thể thay thế xác nhận chuyên gia hoặc
+khoảng tin cậy thống kê.
+
+\section{Bàn luận}
+
+Điểm mạnh của thiết kế là có thể chạy quy trình nghiệp vụ liên tục từ tài
+liệu và ngân hàng câu hỏi tới đề thi, lượt thi và kết quả; nhánh dự phòng
+cũng cho phép kiểm thử luồng sinh mà không phụ thuộc khóa dịch vụ ngoài.
+Việc lưu bằng chứng nguồn và hỗ trợ giảng viên rà soát là phù hợp với yêu
+cầu truy xuất nội dung, nhưng không loại bỏ hoàn toàn nguy cơ câu hỏi sai
+hoặc trích xuất sai.
+
+Kết quả 35/35 bài đạt phản ánh phạm vi các ca kiểm thử đã viết. Nó không
+đồng nghĩa hệ thống không còn lỗi, cũng không đo độ chính xác nội dung do
+AI tạo. Build frontend thành công xác nhận khả năng biên dịch tại môi trường
+đã kiểm tra, nhưng chưa xác nhận triển khai lên máy chủ thực tế.
+
+\subsection{Đánh giá theo các vai trò}
+Đối với giảng viên, việc gộp ngân hàng, bộ lọc ma trận và lịch sử đề làm
+nền tảng cho khả năng tái sử dụng nội dung. Giá trị thực tiễn sẽ phụ thuộc
+vào độ chính xác của căn cứ và thời gian phải chỉnh sửa câu AI; đồ án chưa
+thực hiện đo trước/sau để kết luận tiết kiệm thời gian. Đối với sinh viên,
+lưu vị trí và cho tiếp tục bài làm hỗ trợ tính liên tục, còn mã truy cập
+tách việc dự thi khỏi việc gửi liên kết trực tiếp đến từng tài khoản.
+Đối với quản trị viên, quản lý vai trò tập trung thuận tiện nhưng làm tăng
+hậu quả nếu tài khoản có quyền cao bị chiếm dụng.
+
+\subsection{Đánh đổi kiến trúc}
+Tích hợp logic AI trong backend giúp sử dụng cơ sở dữ liệu và phân quyền
+đã có, giảm số dịch vụ phải vận hành. Mặt trái là tác vụ trích xuất/gọi
+LLM tốn thời gian có thể giữ request HTTP lâu và dùng bộ nhớ khi file được
+đọc trong memory. Việc tách AI thành worker hoặc hàng đợi có thể cải thiện
+độ bền và khả năng quan sát ở giai đoạn sau, nhưng đòi hỏi cơ chế trạng
+thái job, retry an toàn, idempotency và giới hạn chi phí; chưa nên xem là
+thành phần đã hiện thực.
+
+\section{Hạn chế}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=3pt]
+  \item Chưa có bộ dữ liệu chuẩn để đo độ đúng, độ bao phủ và độ đa dạng của
+        câu hỏi sinh tự động.
+  \item Chất lượng đầu ra phụ thuộc mô hình/API ngoài khi được cấu hình; bộ
+        sinh dự phòng dựa trên quy tắc có thể tạo câu hỏi kém tự nhiên hoặc
+        chưa đủ sâu.
+  \item OCR chịu ảnh hưởng của chất lượng scan và bố cục; nhánh hiện tại
+        dùng dữ liệu nhận dạng tiếng Anh, chưa có benchmark cho tài liệu
+        tiếng Việt hoặc tập ảnh được gán nhãn.
+  \item Câu tự luận cần được giảng viên chấm; giao diện có trường rubric và
+        phản hồi nhưng báo cáo chưa xác nhận một bộ chấm tự động bằng AI.
+  \item Chưa thực hiện kiểm thử tải, kiểm thử người dùng, đánh giá bảo mật
+        triển khai và đo khả năng mở rộng.
+  \item Các thư mục \code{ai-services/} và \code{ml-models/} mới là khung dự
+        kiến; OCR và sinh câu hỏi hiện được gọi từ backend API.
+\end{itemize}

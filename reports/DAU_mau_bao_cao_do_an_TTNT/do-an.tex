@@ -1,0 +1,91 @@
+% !TEX program = xelatex
+% =====================================================================
+%  BÁO CÁO ĐỒ ÁN TRÍ TUỆ NHÂN TẠO, HỌC PHẦN AIP202
+%  Khoa Công nghệ Thông tin, Trường Đại học Kiến trúc Đà Nẵng
+%
+%  Build:  latexmk -xelatex do-an.tex
+%  Overleaf: Menu > Compiler > XeLaTeX, rồi bấm Recompile.
+% =====================================================================
+% \documentclass phải nằm ở file này, không được chuyển vào settings.tex,
+% vì Overleaf dò file chính bằng cách tìm file có chứa \documentclass.
+\documentclass[12pt, a4paper, oneside]{book}
+\input{styles/settings}
+
+% =====================================================================
+%  THÔNG TIN ĐỒ ÁN — thay các trường trong ngoặc vuông trước khi nộp
+% =====================================================================
+% Loại báo cáo
+\crname{BÁO CÁO ĐỒ ÁN TRÍ TUỆ NHÂN TẠO}
+% Học phần
+\cmonhoc{Học phần AIP202 \textperiodcentered{} 2 tín chỉ}
+% Tên đề tài. Dùng \\ để ngắt dòng cho cân đối trên bìa.
+\ctname{XÂY DỰNG NỀN TẢNG AI EXAMHUB DAU\\HỖ TRỢ TẠO ĐỀ VÀ TỔ CHỨC THI TRỰC TUYẾN}
+% Họ tên sinh viên và mã số sinh viên
+\cstuname{Sinh viên 1 \textperiodcentered{} Sinh viên 2}
+\cmssv{Đã ẩn danh}
+\cstudentrows{Sinh viên 1 & Đã ẩn danh\\ Sinh viên 2 & Đã ẩn danh\\}
+% Lớp
+\clopsv{23CT1}
+% Ngành
+\csCouncil{Công nghệ thông tin}
+% Giảng viên hướng dẫn
+\csSupervise{Giảng viên hướng dẫn}
+% Năm học
+\cttime{2026--2027}
+% Khoa quản lý
+\csdeptname{KHOA CÔNG NGHỆ THÔNG TIN}
+% Nơi thực hiện
+\csplace{Đà Nẵng}
+
+\begin{document}
+
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+% Bìa trang trọng có khung kép. Muốn dùng bìa hiện đại theo bộ giáo
+% trình của khoa thì thay dòng dưới bằng \coverpagehiendai
+\coverpage
+
+% ---------------------------------------------------------------------
+%  PHẦN ĐẦU: đánh số trang bằng số La Mã thường
+% ---------------------------------------------------------------------
+\frontmatter
+\dauPageStyle
+
+\input{chuong/00-loi-cam-doan}
+\input{chuong/00-loi-cam-on}
+\input{chuong/00-tom-tat}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+% ---------------------------------------------------------------------
+%  THÂN BÁO CÁO
+% ---------------------------------------------------------------------
+\mainmatter
+\dauPageStyle
+
+\input{chuong/01-mo-dau}
+\input{chuong/02-co-so-ly-thuyet}
+\input{chuong/03-phan-tich-thiet-ke}
+\input{chuong/04-cai-dat}
+\input{chuong/05-ket-qua-danh-gia}
+\input{chuong/06-ket-luan}
+
+% ---------------------------------------------------------------------
+%  TÀI LIỆU THAM KHẢO VÀ PHỤ LỤC
+% ---------------------------------------------------------------------
+\backmatter
+
+% \phantomsection tạo mốc neo riêng cho mục lục, nếu thiếu thì hyperref
+% báo trùng neo giữa dấu trang và dấu trang cha.
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\input{chuong/07-phu-luc}
+
+\end{document}

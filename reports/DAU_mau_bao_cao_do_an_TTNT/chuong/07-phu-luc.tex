@@ -1,0 +1,586 @@
+% ---------------------------------------------------------------------
+%  PHỤ LỤC
+% ---------------------------------------------------------------------
+\chapter{Phụ lục}
+\label{ch:phuluc}
+\markboth{Phụ lục}{}
+
+\section{Hướng dẫn cài đặt và chạy hệ thống}
+\label{sec:huongdan-run}
+
+Mã nguồn của hệ thống nằm trong thư mục \code{E:\textbackslash
+AI-EXAMHUB-DAU}. Cấu hình thật được đọc từ các tệp môi trường không nên đưa
+lên kho công khai. Để chạy stack phát triển bằng Docker Compose, tạo bản
+cấu hình cục bộ từ ví dụ và khởi động các dịch vụ:
+
+\begin{lstlisting}[language=bash, caption={Các lệnh khởi chạy stack phát triển.}]
+cd E:\AI-EXAMHUB-DAU
+docker compose up --build
+\end{lstlisting}
+
+Theo tệp Compose hiện có, frontend được công bố tại
+\code{http://localhost:8080}, backend tại \code{http://localhost:3000/api}
+và PostgreSQL tại cổng 5432. Docker Compose cho phép mô tả và khởi chạy
+nhiều container từ một cấu hình \cite{DockerComposeDocs}. Các giá trị cổng
+và mật khẩu development trong dự án chỉ phục vụ cài đặt cục bộ; phải đổi
+trước khi triển khai có dữ liệu thật.
+
+Để chạy từng phần, vào \code{backend/api}, cài phụ thuộc theo
+\code{package-lock.json}, chuẩn bị PostgreSQL và cấu hình các biến môi
+trường từ \code{.env.example}; sau đó chạy \code{npm run dev}. Frontend
+được chạy trong thư mục \code{frontend/web} bằng \code{npm install} và
+\code{npm run dev}; đặt \code{VITE\_API\_URL} trỏ tới backend đang chạy.
+Các lệnh kiểm tra là \code{npm test} tại backend và
+\code{npm run build} tại frontend. Nếu database schema chưa đầy đủ, cần
+áp dụng các migration theo đúng thứ tự trong thư mục dự án. Không chạy
+test bằng tài khoản hoặc database production.
+
+\section{Tổng quan cơ sở dữ liệu}
+\label{sec:db-overview}
+
+Schema được khởi tạo từ \code{database/schema.sql} và bổ sung theo các
+migration. Định danh chính dùng UUID; các nội dung linh hoạt như lựa chọn,
+câu trả lời, danh sách ID hoặc metadata được lưu dạng JSONB; thời điểm
+nghiệp vụ dùng \code{TIMESTAMPTZ}. Các khoá ngoại quy định vòng đời phụ
+thuộc của bài nộp, kết quả, lượt thi và thành viên. Các quan hệ lõi được
+minh hoạ ở Hình~\ref{fig:erd}; Bảng~\ref{tab:dulieu} trong
+Chương~\ref{ch:thietke} là bản đồ thực thể ở mức khái quát.
+
+\subsection{Quy ước đọc từ điển dữ liệu}
+Trong các bảng dưới đây, PK là khoá chính; FK là khoá ngoại; UQ là giá trị
+duy nhất; NN là bắt buộc; CK là ràng buộc miền/điều kiện. Kiểu JSONB hỗ trợ
+dữ liệu JSON, nhưng không tự thay thế kiểm tra tính hợp lệ của cấu trúc
+payload trong API. Một số cột được bổ sung qua migration hoặc
+\code{ensureExamSchema()} lúc ứng dụng khởi động; vì vậy schema cuối cùng
+đang chạy phải được đối chiếu với toàn bộ migration, không chỉ một file SQL.
+
+\section{Từ điển dữ liệu}
+\label{sec:data-dictionary}
+
+\subsection{Bảng users -- tài khoản và vai trò}
+Bảng \code{users} là gốc định danh của người dùng, giữ email đăng nhập,
+thông tin hồ sơ và phạm vi quyền. Vai trò được giới hạn vào
+\code{admin}, \code{teacher} hoặc \code{student}. Trường
+\code{institutional\_id} hỗ trợ mã cán bộ/sinh viên và có chỉ mục duy nhất
+riêng khi trường khác NULL. Không lưu mật khẩu rõ; API lưu giá trị băm ở
+\code{password\_hash}.
+
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng users.}
+\label{tab:dict-users}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.20\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh tài khoản, mặc định sinh UUID. \\
+email & VARCHAR(255) & NN, UQ & Địa chỉ đăng nhập, duy nhất. \\
+password\_hash & TEXT & NN & Mật khẩu đã băm; không phải mật khẩu gốc. \\
+full\_name & VARCHAR(255) & NN & Họ tên hiển thị. \\
+role & VARCHAR(32) & NN, CK & Vai trò admin/teacher/student. \\
+avatar\_url & TEXT & NULL & Đường dẫn hoặc nội dung ảnh đại diện theo API. \\
+phone & VARCHAR(30) & NULL & Số điện thoại liên hệ. \\
+institutional\_id & VARCHAR(64) & UQ, NULL & Mã định danh cơ sở đào tạo. \\
+faculty & VARCHAR(255) & NULL & Khoa của người dùng. \\
+department & VARCHAR(255) & NULL & Bộ môn hoặc đơn vị. \\
+cohort & VARCHAR(64) & NULL & Khoá học. \\
+class\_name & VARCHAR(128) & NULL & Lớp hành chính. \\
+created\_at & TIMESTAMPTZ & NN & Thời điểm tạo tài khoản. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng questions -- ngân hàng câu hỏi}
+Bảng \code{questions} giữ nội dung và metadata cần cho việc chọn câu vào đề.
+Các trường liên quan loại câu, câu trả lời, mức nhận thức và nguồn có thể
+được mở rộng qua migration. Lựa chọn và rubric có cấu trúc linh hoạt; nội
+dung nguồn được lưu riêng ở \code{source\_evidence} để phục vụ rà soát và
+truy nguyên. Câu hỏi có thể tồn tại độc lập với người tạo nếu tài khoản
+gốc bị xoá.
+
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng questions.}
+\label{tab:dict-questions}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh câu hỏi. \\
+subject & VARCHAR(255) & NN & Môn/chủ đề học thuật. \\
+content & TEXT & NN & Lời dẫn hoặc nội dung câu hỏi. \\
+choices & JSONB & NN & Danh sách lựa chọn; mặc định mảng rỗng. \\
+answer\_index & INTEGER & NULL & Chỉ số lựa chọn đúng cho câu trắc nghiệm. \\
+answer\_text & TEXT & NULL & Đáp án tham khảo dạng văn bản. \\
+source\_evidence & TEXT & NULL & Trích đoạn nguồn làm căn cứ cho câu hỏi. \\
+cognitive\_level & VARCHAR(32) & NULL & Mức nhận thức như understanding/application. \\
+rubric & JSONB & NULL & Cấu trúc tiêu chí chấm tự luận nếu có. \\
+difficulty & VARCHAR(16) & NN, CK & easy, medium hoặc hard; mặc định medium. \\
+type & VARCHAR(32) & Schema mở rộng & Loại multipleChoice/essay; được bổ sung trong schema runtime/migration. \\
+created\_by & UUID & FK, NULL & Tài khoản tạo; xoá tài khoản đặt NULL. \\
+created\_at & TIMESTAMPTZ & NN & Thời điểm tạo câu hỏi. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exams -- đề thi}
+Bảng \code{exams} lưu thông tin định danh và trạng thái vòng đời của đề.
+Các chi tiết cấu hình đề được lưu trong \code{metadata} dạng JSONB; các
+liên kết câu hỏi có thứ tự được chuẩn hoá ở bảng \code{exam\_questions}.
+Schema cũng có \code{question\_ids} nhằm tương thích với các luồng cũ.
+Khi bảo trì cần xác định một nguồn dữ liệu chuẩn để tránh hai biểu diễn
+bị lệch nhau.
+
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exams.}
+\label{tab:dict-exams}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh đề. \\
+title & VARCHAR(255) & NN & Tên đề thi. \\
+subject & VARCHAR(255) & NN & Môn học. \\
+status & VARCHAR(16) & NN, CK & Trạng thái phát hành ở schema. \\
+workflow\_status & VARCHAR(16) & NN/default & Trạng thái quy trình: draft/review/approved/published trong ứng dụng. \\
+question\_ids & JSONB & NN & Danh sách ID tương thích với luồng legacy. \\
+metadata & JSONB & NN & Thời lượng, tổng điểm, ma trận, năm học, rubric và thông tin đề. \\
+created\_by & UUID & FK, NULL & Tài khoản tạo; xoá người tạo đặt NULL. \\
+created\_at & TIMESTAMPTZ & NN & Thời điểm tạo. \\
+updated\_at & TIMESTAMPTZ & NN & Thời điểm cập nhật gần nhất. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exam\_questions -- câu hỏi thuộc đề}
+Bảng nối biểu diễn quan hệ nhiều--nhiều giữa đề và câu hỏi, đồng thời
+lưu thứ tự hiển thị. Một câu hỏi có thể tái sử dụng trong nhiều đề; xoá đề
+sẽ cascade xoá liên kết nhưng không xoá câu hỏi.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exam\_questions.}
+\label{tab:dict-exam-questions}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+exam\_id & UUID & PK, FK & Đề chứa câu hỏi; xoá đề cascade liên kết. \\
+question\_id & UUID & PK, FK & Câu hỏi; không cho xoá nếu vẫn thuộc đề. \\
+position & INTEGER & NN & Vị trí câu trong đề. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exam\_rooms -- phòng thi}
+Phòng thi gắn với một đề chính và có thể gắn nhiều đề bổ sung qua bảng
+\code{exam\_room\_exams}. Mã tham gia được đảm bảo duy nhất. Thời điểm mở,
+đóng và trạng thái điều khiển khả năng vào phòng.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exam\_rooms.}
+\label{tab:dict-exam-rooms}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh phòng thi. \\
+exam\_id & UUID & FK, NN & Đề chính của phòng; xoá đề cascade phòng. \\
+name & VARCHAR(255) & NN & Tên phòng. \\
+starts\_at & TIMESTAMPTZ & NULL & Thời điểm dự kiến bắt đầu. \\
+ends\_at & TIMESTAMPTZ & NULL & Thời điểm kết thúc/đóng nhận bài. \\
+status & VARCHAR(16) & NN, CK & scheduled, active hoặc closed. \\
+access\_code & VARCHAR(8) & NN, UQ & Mã tham gia ngẫu nhiên duy nhất. \\
+created\_by & UUID & FK, NULL & Tài khoản tạo phòng. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exam\_room\_exams -- đề có thể phân cho phòng}
+Bảng liên kết phòng với một hoặc nhiều đề được giảng viên chọn. Mỗi đề có
+vị trí trong danh sách; một lượt thi chọn đề được gán cho sinh viên và
+lưu ID đề ở \code{exam\_attempts}.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exam\_room\_exams.}
+\label{tab:dict-room-exams}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+room\_id & UUID & PK, FK & Phòng thi; xoá phòng cascade liên kết. \\
+exam\_id & UUID & PK, FK & Đề được đưa vào danh sách phân bổ. \\
+position & INTEGER & NN, UQ theo phòng & Vị trí đề; duy nhất trong một phòng. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exam\_attempts -- lượt dự thi}
+Lượt thi lưu trạng thái làm bài độc lập với định nghĩa đề. Bộ câu hỏi được
+giao và đáp án lưu ở JSONB để tiếp tục bài làm; khoá duy nhất
+\code{(room\_id, student\_id)} bảo đảm một lượt chính cho sinh viên trong
+phòng theo schema hiện tại.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exam\_attempts.}
+\label{tab:dict-attempts}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh lượt thi. \\
+room\_id & UUID & FK, NN & Phòng thi chứa lượt. \\
+exam\_id & UUID & FK, NN & Đề được giao. \\
+student\_id & UUID & FK, NN & Sinh viên; xoá tài khoản cascade lượt. \\
+question\_set & JSONB & NN & Snapshot câu hỏi an toàn của lượt thi. \\
+answers & JSONB & NN & Câu trả lời theo ID; mặc định object rỗng. \\
+marked\_questions & JSONB & NN & Danh sách câu được đánh dấu xem lại. \\
+current\_question & INTEGER & NN & Vị trí hiện tại để tiếp tục bài. \\
+started\_at & TIMESTAMPTZ & NN & Thời điểm bắt đầu. \\
+deadline\_at & TIMESTAMPTZ & NN & Hạn hoàn thành bài. \\
+submitted\_at & TIMESTAMPTZ & NULL & Thời điểm nộp bài. \\
+submission\_id & UUID & FK, UQ, NULL & Bài nộp đã tạo cho lượt thi. \\
+updated\_at & TIMESTAMPTZ & NN & Thời điểm cập nhật gần nhất. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng exam\_attempt\_events -- sự kiện lượt thi}
+Bảng sự kiện hỗ trợ giám sát một số dấu hiệu thao tác trình duyệt. Schema
+hiện tại định nghĩa loại sự kiện \code{tab\_hidden}; đây không phải bằng
+chứng đầy đủ về hành vi của sinh viên, cũng không thay thế cơ chế giám sát
+trực tiếp hoặc quy chế thi.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng exam\_attempt\_events.}
+\label{tab:dict-attempt-events}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh sự kiện. \\
+attempt\_id & UUID & FK, NN & Lượt thi; xoá lượt cascade sự kiện. \\
+event\_type & VARCHAR(32) & NN, CK & Loại sự kiện cho phép, hiện gồm tab\_hidden. \\
+occurred\_at & TIMESTAMPTZ & NN & Thời điểm ghi nhận sự kiện. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng submissions -- bài nộp}
+Submission là bản ghi nộp bài có cấu trúc thống nhất cho lịch sử và chấm
+điểm. Câu trả lời được giữ trong JSONB; trạng thái phân biệt bài đã nộp,
+đang chấm hoặc đã chấm. Sinh viên có thể bị đặt NULL khi tài khoản bị
+xoá theo chính sách schema.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng submissions.}
+\label{tab:dict-submissions}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh bài nộp. \\
+exam\_id & UUID & FK, NN & Đề được nộp. \\
+student\_id & UUID & FK, NULL & Sinh viên nộp. \\
+answers & JSONB & NN & Nội dung trả lời đã nộp. \\
+status & VARCHAR(16) & NN, CK & submitted, grading hoặc graded. \\
+submitted\_at & TIMESTAMPTZ & NN & Thời điểm nộp. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng results -- kết quả chấm}
+Mỗi bài nộp có tối đa một bản ghi kết quả. Kết quả giữ điểm, phản hồi và
+thời điểm chấm. Mức điểm tối đa được xác định từ metadata của đề và được
+kiểm tra trong luồng chấm.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng results.}
+\label{tab:dict-results}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh kết quả. \\
+submission\_id & UUID & FK, NN, UQ & Bài nộp; một kết quả cho mỗi bài. \\
+score & NUMERIC(5,2) & NN & Điểm số, mặc định 0. \\
+feedback & TEXT & NULL & Nhận xét của người chấm. \\
+graded\_at & TIMESTAMPTZ & NN & Thời điểm ghi/cập nhật điểm. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng rubrics -- tiêu chí chấm}
+Bảng \code{rubrics} gắn bộ tiêu chí với đề thi. Tiêu chí có dạng JSONB để
+mô tả cấu trúc rubric mà không tạo bảng con cho từng cấp điểm. Việc lưu
+rubric không đồng nghĩa đã có công cụ AI tự động áp dụng rubric.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng rubrics.}
+\label{tab:dict-rubrics}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh bộ rubric. \\
+exam\_id & UUID & FK, NN & Đề áp dụng; xoá đề cascade rubric. \\
+title & VARCHAR(255) & NN & Tên tiêu chí chấm. \\
+criteria & JSONB & NN & Danh sách tiêu chí/mức điểm; mặc định mảng rỗng. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng classroom\_rooms -- lớp học trực tuyến}
+Lớp học lưu thông tin buổi học, chế độ kết nối và quyền nhận thành viên.
+Mã tham gia là duy nhất; tài khoản tạo lớp là bắt buộc. Google Meet URL
+được kiểm tra ở API khi chế độ kết nối là Meet.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng classroom\_rooms.}
+\label{tab:dict-classroom-rooms}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+id & UUID & PK & Định danh lớp. \\
+name & VARCHAR(160) & NN & Tên lớp học. \\
+description & TEXT & NN & Mô tả, mặc định chuỗi rỗng. \\
+mode & VARCHAR(20) & NN, CK & google\_meet hoặc direct. \\
+meet\_url & TEXT & NULL & Liên kết Google Meet nếu chế độ tương ứng. \\
+access\_code & VARCHAR(8) & NN, UQ & Mã tham gia lớp duy nhất. \\
+status & VARCHAR(16) & NN, CK & scheduled, live hoặc ended. \\
+admissions\_open & BOOLEAN & NN & Có nhận sinh viên mới hay không. \\
+started\_at & TIMESTAMPTZ & NULL & Thời điểm bắt đầu buổi học. \\
+ended\_at & TIMESTAMPTZ & NULL & Thời điểm kết thúc buổi học. \\
+created\_by & UUID & FK, NN & Giảng viên/quản trị viên tạo lớp. \\
+created\_at & TIMESTAMPTZ & NN & Thời điểm tạo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bảng classroom\_members -- thành viên lớp}
+Bảng nối thành viên có khoá ghép để cùng một sinh viên không gia nhập
+trùng một lớp. Lịch sử gia nhập được lưu theo thời gian.
+\begin{table}[H]
+\centering
+\caption{Từ điển dữ liệu bảng classroom\_members.}
+\label{tab:dict-classroom-members}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.21\textwidth}p{0.17\textwidth}p{0.12\textwidth}X}
+\toprule
+\rowcolor{gray100}Trường & Kiểu & Ràng buộc & Ý nghĩa \\
+\midrule
+classroom\_id & UUID & PK, FK & Lớp học; xoá lớp cascade thành viên. \\
+student\_id & UUID & PK, FK & Tài khoản sinh viên; xoá tài khoản cascade quan hệ. \\
+joined\_at & TIMESTAMPTZ & NN & Thời điểm tham gia. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Danh mục API theo nhóm nghiệp vụ}
+\label{sec:api-catalog}
+
+Các endpoint dưới đây được tổng hợp từ route và tài liệu API trong dự án.
+API có tiền tố \code{/api}; các endpoint đánh dấu “cần xác thực” yêu cầu
+JWT, còn thao tác quản trị/giảng viên có kiểm tra vai trò. Hợp đồng HTTP
+có thể được mô tả bằng OpenAPI để tạo tài liệu và kiểm thử nhất quán
+\cite{OpenAPISpec}.
+
+\subsection{Xác thực, tài khoản và ngân hàng câu hỏi}
+\begin{table}[H]
+\centering
+\caption{Endpoint xác thực, người dùng và câu hỏi.}
+\label{tab:api-auth-questions}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.13\textwidth}p{0.39\textwidth}X}
+\toprule
+\rowcolor{gray100}Method & Endpoint & Mục đích / quyền \\
+\midrule
+POST & \code{/auth/register} & Đăng ký tài khoản sinh viên. \\
+POST & \code{/auth/login} & Đăng nhập bằng email/mật khẩu. \\
+GET & \code{/auth/me} & Lấy hồ sơ/token mới; cần xác thực. \\
+PUT & \code{/auth/profile} & Cập nhật hồ sơ tài khoản; cần xác thực. \\
+PUT & \code{/auth/password} & Đổi mật khẩu; cần xác thực. \\
+GET & \code{/auth/google} & Khởi tạo đăng nhập Google nếu được cấu hình. \\
+GET & \code{/auth/google/callback} & Nhận kết quả chuyển hướng OAuth. \\
+GET & \code{/users} & Danh sách tài khoản/phân trang; admin. \\
+POST & \code{/users} & Tạo tài khoản quản trị; admin. \\
+GET & \code{/questions} & Tra cứu, lọc và phân trang câu hỏi. \\
+POST/PUT/DELETE & \code{/questions} & Thêm/sửa/xoá câu hỏi; teacher/admin, xoá/sửa còn kiểm tra quyền sở hữu. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Tài liệu và quản lý đề thi}
+\begin{table}[H]
+\centering
+\caption{Endpoint xử lý tài liệu và vòng đời đề thi.}
+\label{tab:api-exams}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.13\textwidth}p{0.42\textwidth}X}
+\toprule
+\rowcolor{gray100}Method & Endpoint & Mục đích / quyền \\
+\midrule
+POST & \code{/documents/upload} & Tải và trích xuất tài liệu; teacher/admin. \\
+POST & \code{/documents/analyze} & Phân tích nội dung và trả ứng viên câu hỏi; teacher/admin. \\
+POST & \code{/exams/generate} & Tạo đề từ câu hỏi đã chọn; teacher/admin. \\
+GET & \code{/exams} & Danh sách đề theo phạm vi người dùng. \\
+GET & \code{/exams/:id} & Chi tiết đề; câu trả về cho sinh viên ẩn đáp án nội bộ. \\
+PUT & \code{/exams/:id} & Cập nhật metadata/trạng thái đề. \\
+DELETE & \code{/exams/:id} & Xoá đề theo quyền. \\
+POST & \code{/exams/:id/variants} & Tạo mã đề và ánh xạ lại đáp án. \\
+POST & \code{/exams/:id/validate} & Kiểm tra cấu trúc/ma trận đề. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Phòng thi, bài nộp và lớp học}
+\begin{table}[H]
+\centering
+\caption{Endpoint tổ chức thi, chấm bài và quản lý lớp học.}
+\label{tab:api-rooms-classrooms}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.13\textwidth}p{0.43\textwidth}X}
+\toprule
+\rowcolor{gray100}Method & Endpoint & Mục đích / quyền \\
+\midrule
+POST & \code{/exam-rooms} & Teacher/admin tạo phòng và mã tham gia. \\
+GET & \code{/exam-rooms} & Teacher/admin liệt kê phòng được quản lý. \\
+PATCH & \code{/exam-rooms/:id/status} & Mở/đóng phòng; kiểm tra chủ sở hữu. \\
+GET & \code{/exam-rooms/:id/attempts} & Giám sát tiến độ và sự kiện; teacher/admin. \\
+GET & \code{/exam-rooms/:id/grading} & Lấy các lượt thi đã nộp để chấm. \\
+POST & \code{/exam-rooms/:code/start} & Sinh viên bắt đầu/tiếp tục bài bằng mã phòng. \\
+PUT & \code{/exam-rooms/attempts/:id/answers} & Lưu câu trả lời và vị trí; chủ lượt thi. \\
+POST & \code{/exam-rooms/attempts/:id/submit} & Nộp bài, tự chấm trắc nghiệm. \\
+POST & \code{/exam-rooms/attempts/:id/grade} & Teacher/admin lưu điểm/phản hồi tự luận. \\
+GET & \code{/exam-rooms/my-attempts} & Sinh viên xem lịch sử dự thi. \\
+POST & \code{/classrooms} & Teacher/admin tạo lớp học. \\
+POST & \code{/classrooms/join} & Sinh viên gia nhập bằng mã lớp. \\
+GET/PATCH & \code{/classrooms/:id} & Xem lớp hoặc đổi trạng thái/nhận thành viên theo quyền. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Danh mục migration dữ liệu}
+\label{sec:migrations}
+
+Các migration trong dự án ghi nhận việc mở rộng schema theo chức năng.
+Bảng~\ref{tab:migrations} tóm tắt từ tên file; trước khi chạy trên dữ liệu
+thật cần đọc nội dung migration, xác minh thứ tự, sao lưu và có phương án
+rollback.
+\begin{table}[H]
+\centering
+\caption{Danh mục migration hiện diện trong dự án.}
+\label{tab:migrations}
+\begin{tabularx}{\textwidth}{>{\ttfamily\color{daumaroon}}p{0.16\textwidth}p{0.47\textwidth}X}
+\toprule
+\rowcolor{gray100}Migration & Phạm vi thể hiện ở tên/tệp & Nhóm dữ liệu \\
+\midrule
+001 & \code{initial\_schema} & Schema ban đầu: người dùng, câu hỏi, đề và dữ liệu liên quan. \\
+002 & \code{add\_metadata\_to\_exams} & Metadata cấu hình cho đề thi. \\
+003 & \code{exam\_generation\_validation} & Trường phục vụ kiểm tra sinh đề. \\
+004 & \code{add\_answer\_text\_to\_questions} & Đáp án dạng văn bản cho câu hỏi. \\
+005 & \code{add\_question\_source\_evidence} & Bằng chứng trích từ tài liệu nguồn. \\
+006 & \code{add\_essay\_cognitive\_rubric} & Mức độ nhận thức và rubric câu tự luận. \\
+007 & \code{online\_exam\_rooms} & Phòng thi, lượt thi trực tuyến và sự kiện. \\
+008 & \code{user\_profiles} & Trường hồ sơ tài khoản. \\
+009 & \code{university\_user\_profiles} & Mã và thuộc tính hồ sơ đại học. \\
+010 & \code{exam\_tab\_switch\_events} & Lịch sử sự kiện chuyển tab. \\
+011 & \code{classrooms} & Lớp học, thành viên và mã tham gia. \\
+012 & \code{classroom\_lifecycle} & Trạng thái vòng đời và nhận thành viên lớp. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Ma trận kiểm thử bổ sung}
+\label{sec:test-matrix}
+
+Bên cạnh 35 ca tự động đã chạy, Bảng~\ref{tab:manual-tests} là bộ kịch bản
+kiểm thử thủ công đề xuất cho buổi trình diễn. Đây không phải kết quả đã
+chạy; cột trạng thái được để trống để người nộp cập nhật sau khi thực hiện.
+\begin{table}[H]
+\centering
+\caption{Kịch bản kiểm thử thủ công trước khi bảo vệ.}
+\label{tab:manual-tests}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daumaroon}}p{0.10\textwidth}X X p{0.15\textwidth}}
+\toprule
+\rowcolor{gray100}Mã & Bước kiểm thử & Kết quả mong đợi & Trạng thái \\
+\midrule
+M01 & Đăng nhập lần lượt bằng vai trò sinh viên và giảng viên. & Menu và endpoint phù hợp vai trò; quyền không hợp lệ bị từ chối. & Chưa ghi nhận \\
+M02 & Tải PDF có văn bản thật và kiểm tra phần text trích xuất. & Nội dung có thể xem trước; câu hỏi liên kết được với đoạn nguồn. & Chưa ghi nhận \\
+M03 & Tải PDF quét chất lượng thấp hoặc file rỗng. & Có cảnh báo trích xuất; không sinh đề thành công giả. & Chưa ghi nhận \\
+M04 & Tạo đề ma trận vượt số câu hiện có. & Hiện rõ số câu thiếu; không phát hành đề không hợp lệ. & Chưa ghi nhận \\
+M05 & Gửi duyệt và chuyển trạng thái đề. & Trạng thái lưu sau khi tải lại trang. & Chưa ghi nhận \\
+M06 & Vào phòng thi, trả lời một phần, tải lại rồi tiếp tục. & Đáp án/vị trí được khôi phục từ đúng lượt. & Chưa ghi nhận \\
+M07 & Nộp bài có trắc nghiệm và tự luận. & Trắc nghiệm được chấm; tự luận chờ giảng viên chấm. & Chưa ghi nhận \\
+M08 & Sinh viên thử xem API chi tiết đề/đáp án nội bộ. & API không trả đáp án đúng của bài thi. & Chưa ghi nhận \\
+M09 & Gia nhập lớp đã kết thúc hoặc đóng nhận thành viên. & Từ chối người mới; thành viên đã có vẫn theo chính sách. & Chưa ghi nhận \\
+M10 & Mở giao diện trên thiết bị di động, bàn phím và phóng đại. & Bố cục và thao tác chính còn sử dụng được. & Chưa ghi nhận \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Rủi ro, giới hạn và biện pháp giảm thiểu}
+\label{sec:risk-register}
+
+\begin{table}[H]
+\centering
+\caption{Sổ đăng ký rủi ro của nguyên mẫu AI ExamHub DAU.}
+\label{tab:risk-register}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daumaroon}}p{0.17\textwidth}X X}
+\toprule
+\rowcolor{gray100}Rủi ro & Tác động & Biện pháp đề xuất \\
+\midrule
+Đáp án AI sai & Sinh viên nhận nội dung sai; đề thi mất độ tin cậy. & Bắt buộc giảng viên xác minh câu, đáp án và nguồn trước phát hành. \\
+Prompt injection từ tài liệu & Nội dung tải lên có thể chứa chỉ dẫn làm lệch yêu cầu cho mô hình. & Cô lập tài liệu khỏi instruction, loại hành động công cụ nhạy cảm, kiểm tra đầu ra và quyền duyệt của người. \\
+Lộ dữ liệu qua API LLM & Học liệu/tài liệu có dữ liệu cá nhân đi ra nhà cung cấp. & Cảnh báo trước khi gửi, lọc dữ liệu nhạy cảm, cấu hình chính sách lưu giữ và nhà cung cấp được phép. \\
+Lộ đáp án thi & Lộ đáp án làm mất công bằng kiểm tra. & Backend chỉ trả question view đã loại answer fields; test truy cập trực tiếp bằng vai trò sinh viên. \\
+Chiếm đoạt tài khoản & Truy cập hồ sơ, đề, kết quả và dữ liệu lớp. & Secret mạnh, HTTPS, xác thực phù hợp, giới hạn quyền, nhật ký và quy trình đổi/thu hồi token. \\
+Tệp độc hại/quá lớn & Cạn bộ nhớ, lỗi parser hoặc ảnh hưởng dịch vụ. & Giới hạn kích thước/định dạng, kiểm tra nội dung, cách ly xử lý và giới hạn tài nguyên. \\
+OCR tiếng Việt kém & Nội dung nguồn bị nhận sai rồi lan truyền sang câu hỏi. & Định cấu hình ngôn ngữ phù hợp, hiển thị nguồn, đo lỗi OCR và cho phép người dùng hiệu chỉnh. \\
+Database development & Mất dữ liệu hoặc lộ mật khẩu do cấu hình mặc định. & Thay mật khẩu, tách network, sao lưu/khôi phục kiểm chứng và dùng secret manager. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sổ đăng ký là phân tích rủi ro thiết kế, không phải báo cáo kiểm thử xâm
+nhập. Các rủi ro prompt injection và phân quyền dịch vụ API cần được đối
+chiếu với khuyến nghị OWASP về ứng dụng web, API và LLM
+\cite{OWASPTop10,OWASPAPI,OWASPLLM}; khung NIST giúp tổ chức việc nhận
+diện, đo và xử lý rủi ro AI theo vòng đời \cite{NISTAIRMF}.
+
+\section{Mục tự kiểm trước khi nộp}
+\label{sec:checklist}
+
+\begin{tukiem}
+  \item Đã thay tên, MSSV, lớp, giảng viên hướng dẫn và năm học trên bìa.
+  \item Đã rà soát mọi chương, mục lục, danh mục hình/bảng và số tham chiếu.
+  \item Đã kiểm tra lại nội dung PDF/DOCX/OCR, các hạn chế kỹ thuật và phiên
+        bản code được dùng để báo cáo.
+  \item Đã chạy lại API tests, frontend build và ghi đúng phiên bản kết quả.
+  \item Đã kiểm tra các đề xuất AI với tài liệu gốc; không coi confidence là
+        xác suất đúng.
+  \item Đã bổ sung ảnh chụp giao diện thật nếu giảng viên yêu cầu; các hình
+        wireframe trong báo cáo được nhận diện là hình minh hoạ.
+  \item Đã kiểm tra và ghi nguồn cho tối thiểu 15 tài liệu tham khảo có liên
+        kết; mọi tài liệu trích dẫn đều có trong danh mục.
+  \item Đã thay toàn bộ cấu hình development trước khi triển khai có dữ liệu
+        thật.
+  \item Đã xác nhận số trang sau khi biên dịch XeLaTeX; không coi số trang
+        ước lượng trong source là số trang PDF.
+  \item Đã xoá nội dung hướng dẫn và placeholder không thuộc bản nộp cuối.
+\end{tukiem}
+
+\section{Nhận xét của giảng viên hướng dẫn}
+\label{sec:nhanxet}
+
+\khungnhanxet[7.5cm]
+
+\vspace{0.8em}
+\noindent\begin{minipage}[t]{0.5\textwidth}
+\color{daunavy}
+{\color{daumaroon}\bfseries Điểm số}
+
+\vspace{0.7em}
+\dongchamnhan{Bằng số:}
+
+\vspace{0.9em}
+\dongchamnhan{Bằng chữ:}
+\end{minipage}\hfill
+\okyten{\dauGVHD}{Giảng viên hướng dẫn}

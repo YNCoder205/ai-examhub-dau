@@ -1,0 +1,130 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 1 — MỞ ĐẦU
+% ---------------------------------------------------------------------
+\chapter{Mở đầu và cơ sở lý thuyết}
+\label{ch:modau}
+
+\begin{muctieu}
+Chương này nêu bối cảnh, mục tiêu và phạm vi đồ án, sau đó trình bày cơ sở
+lý thuyết cùng công nghệ của nền tảng AI ExamHub DAU.
+\end{muctieu}
+
+\section{Lý do chọn đề tài}
+
+Trong quy trình đào tạo, giảng viên cần biên soạn câu hỏi, tạo nhiều đề,
+quản lý lịch thi, theo dõi bài làm và tổng hợp kết quả. Khi các công việc
+này thực hiện rời rạc, việc tái sử dụng học liệu và theo dõi trạng thái
+kiểm tra trở nên khó khăn. AI ExamHub DAU được xây dựng như một nền tảng
+thống nhất cho ngân hàng câu hỏi, hỗ trợ sinh câu hỏi từ tài liệu, quy trình
+duyệt đề và tổ chức lớp học, phòng thi trực tuyến.
+
+Đề tài phù hợp với học phần trí tuệ nhân tạo vì kết hợp một ứng dụng thực
+tiễn với thành phần xử lý ngôn ngữ: đọc nội dung học liệu, đề xuất câu hỏi
+và liên kết câu hỏi với bằng chứng trong nguồn. Hệ thống cũng có phương án
+dự phòng dựa trên quy tắc khi không cấu hình dịch vụ mô hình ngôn ngữ. Việc
+khảo sát đồng thời phần AI và quy trình web giúp làm rõ giới hạn của một
+nguyên mẫu tích hợp, thay vì đồng nhất việc kết nối API với một mô hình đã
+được huấn luyện và đánh giá độc lập.
+
+\section{Mục tiêu của đồ án}
+
+Đồ án hướng tới các mục tiêu sau:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Xây dựng ứng dụng web gồm giao diện người dùng, API backend và cơ sở
+        dữ liệu quan hệ.
+  \item Hỗ trợ tải tài liệu học tập, trích xuất văn bản và đề xuất câu hỏi
+        trắc nghiệm/tự luận có thông tin căn cứ.
+  \item Hỗ trợ quản lý câu hỏi, tạo và duyệt đề thi, tổ chức phòng thi trực
+        tuyến và lớp học theo vai trò.
+  \item Kiểm tra các luồng chính bằng kiểm thử API và xác nhận giao diện có
+        thể build/type-check.
+  \item Nêu rõ các giới hạn của phần AI, dữ liệu và kiểm thử, không suy diễn
+        kết quả chức năng thành độ chính xác mô hình.
+\end{itemize}
+
+\section{Câu hỏi nghiên cứu và tiêu chí thành công}
+
+Phạm vi đồ án được định hướng bởi ba câu hỏi. Thứ nhất, làm sao kết nối việc
+tạo đề, duyệt đề và tổ chức kiểm tra vào cùng một quy trình phần mềm có phân
+quyền? Thứ hai, ở mức một nguyên mẫu, làm thế nào hỗ trợ khai thác tài liệu
+học tập mà vẫn giữ được khả năng giảng viên rà soát nguồn? Thứ ba, những
+bằng chứng nào là đủ để kết luận về độ hoàn thiện phần mềm, và những câu hỏi
+nào cần một nghiên cứu đánh giá AI riêng?
+
+Tiêu chí thành công của phần mềm là các chức năng trọng tâm có API/UI tương
+ứng, quyền truy cập được phân theo vai trò, dữ liệu chính được lưu trong
+PostgreSQL, các luồng nghiệp vụ có kiểm thử tự động và frontend build
+thành công. Với thành phần AI, tiêu chí của nguyên mẫu chỉ là tạo được đầu
+ra có cấu trúc hoặc nhánh dự phòng và cung cấp thông tin nguồn để kiểm tra.
+Độ đúng, tính sư phạm, độ khó và hiệu quả học tập không được xem là đã xác
+nhận cho đến khi có bộ chuẩn đánh giá độc lập.
+
+\section{Phương pháp thực hiện}
+
+Đồ án sử dụng phương pháp phát triển theo hướng tích hợp và kiểm chứng
+nghiệp vụ. Trước hết khảo sát cấu trúc mã nguồn và schema, xác định các vai
+trò cùng luồng sử dụng; tiếp đó mô tả kiến trúc client--server, mô hình dữ
+liệu và hợp đồng API. Sau khi hiện thực frontend, backend và các migration,
+các luồng được xác minh bằng kiểm thử API hiện có và lệnh build của
+TypeScript/Vite. Cuối cùng, kết quả được phân loại thành bằng chứng chức
+năng, bằng chứng build và các đánh giá chưa có dữ liệu hỗ trợ.
+
+Phương pháp này phù hợp với mục tiêu tạo nguyên mẫu tích hợp trong phạm vi
+đồ án, nhưng không thể thay thế thực nghiệm có người dùng, đo tải, kiểm thử
+bảo mật độc lập hoặc đánh giá chất lượng nội dung AI bởi chuyên gia. Phạm
+vi và loại bằng chứng được tóm tắt trong Bảng~\ref{tab:phuongphap}.
+
+\begin{table}[H]
+\centering
+\caption{Phương pháp và bằng chứng tương ứng với câu hỏi của đồ án.}
+\label{tab:phuongphap}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.25\textwidth} X X}
+\toprule
+\rowcolor{gray100}Câu hỏi & Cách khảo sát & Bằng chứng có/không có \\
+\midrule
+Tích hợp nghiệp vụ & Đọc frontend, route API, middleware và schema; chạy luồng kiểm thử. & Mã nguồn, 35 ca API đạt và build frontend thành công. \\
+Hỗ trợ khai thác tài liệu & Đọc xử lý trích xuất, cấu hình mô hình, kiểm tra đầu ra và fallback. & Có kiểm thử chức năng; chưa có chấm điểm câu hỏi bởi chuyên gia. \\
+Mức độ chất lượng AI & Xác định tập chuẩn và độ đo cần thiết. & Chưa có tập gán nhãn; không báo cáo accuracy/F1/độ đúng nội dung. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Đóng góp và giới hạn đóng góp}
+
+Đóng góp chính là tích hợp được quy trình tạo câu hỏi có căn cứ, chọn ngân
+hàng để lập đề, duyệt và phát hành, tổ chức phòng thi, lưu tiến độ của
+sinh viên và ghi nhận kết quả trên cùng nền tảng. Về kỹ thuật, hệ thống
+minh hoạ cách phối hợp giao diện React/TypeScript, REST API Express và
+PostgreSQL, có Docker Compose cho môi trường phát triển. Thành phần AI được
+đóng góp ở mức tích hợp suy luận dịch vụ ngoài khi cấu hình cùng một nhánh
+sinh dự phòng; đồ án không tuyên bố đề xuất kiến trúc mô hình mới, huấn
+luyện mô hình riêng hay tạo ra một corpus học thuật mới.
+
+\section{Phạm vi, đối tượng và giả định}
+
+Đối tượng sử dụng gồm quản trị viên, giảng viên và sinh viên. Phạm vi triển
+khai khảo sát trong báo cáo tập trung vào ứng dụng web, API Node.js/Express
+và PostgreSQL. Luồng tạo câu hỏi nhận nội dung tài liệu PDF, DOC/DOCX hoặc
+TXT; khả năng trích xuất phụ thuộc vào định dạng và chất lượng văn bản/OCR.
+Mô hình ngôn ngữ bên ngoài chỉ được sử dụng khi nhà triển khai cung cấp cấu
+hình cần thiết; nếu không, hệ thống dùng bộ sinh dự phòng dựa trên văn bản.
+
+Đồ án không xây dựng hay huấn luyện mô hình nền tảng riêng, không có bộ dữ
+liệu gán nhãn chuẩn để đo độ chính xác sinh câu hỏi, không triển khai các
+thư mục AI riêng như những dịch vụ độc lập, và chưa đánh giá tải hoặc bảo
+mật ở quy mô sản xuất. Chấm điểm tự động hiện tập trung vào câu trắc nghiệm;
+bài tự luận cần giảng viên chấm theo nội dung và tiêu chí.
+
+Các giả định gồm: người tạo đề có quyền sử dụng tài liệu được tải lên; nhà
+triển khai tự cấu hình dịch vụ AI nếu muốn sử dụng nhánh mô hình ngôn ngữ;
+giảng viên xem xét câu hỏi/đáp án trước khi phát hành; cơ sở dữ liệu được
+khởi tạo theo schema/migration tương ứng. Những giả định này cần được rà
+soát khi đưa hệ thống vào sử dụng tại một cơ sở đào tạo thật.
+
+\section{Bố cục báo cáo}
+
+Phần còn lại của báo cáo gồm ba chương. Chương~1 trình bày cơ sở lý thuyết
+và công nghệ liên quan; Chương~2 phân tích yêu cầu, thiết kế dữ liệu và
+kiến trúc, đồng thời mô tả phần cài đặt; Chương~3 tổng hợp kết quả, bằng
+chứng kiểm thử, hạn chế và hướng phát triển. Sau phần tài liệu tham khảo là
+phụ lục hướng dẫn chạy hệ thống, từ điển dữ liệu và danh mục API.

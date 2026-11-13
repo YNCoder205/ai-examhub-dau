@@ -1,0 +1,241 @@
+% ---------------------------------------------------------------------
+%  NỘI DUNG CHƯƠNG 2 — CÀI ĐẶT VÀ THỬ NGHIỆM
+% ---------------------------------------------------------------------
+\section{Cài đặt và thử nghiệm}
+\label{sec:caidat}
+
+\begin{muctieu}
+Phần này mô tả công nghệ, các thành phần đã triển khai và cách kiểm thử
+những luồng nghiệp vụ chính của hệ thống.
+\end{muctieu}
+
+\subsection{Môi trường triển khai}
+
+Dự án được tổ chức thành frontend web, backend API, cơ sở dữ liệu và cấu
+hình Docker Compose. Frontend dùng React 18 và TypeScript 5; backend dùng
+Node.js với Express 5; PostgreSQL 16 là dịch vụ cơ sở dữ liệu trong cấu
+hình container. Các phiên bản thư viện chính được liệt kê ở
+Bảng~\ref{tab:congcu}. Dockerfile của frontend dùng bước build Vite và Nginx
+để phục vụ tệp tĩnh; backend chạy trên ảnh Node.js Alpine.
+
+Mã nguồn được kiểm tra tại thư mục cục bộ
+\code{E:\textbackslash AI-EXAMHUB-DAU}. Cấu hình môi trường được cung cấp qua
+các tệp \code{.env.example}; khóa dịch vụ và mật khẩu dùng khi triển khai
+thực tế cần được thay bằng giá trị riêng, không đưa vào báo cáo hoặc kho mã
+nguồn. Hướng dẫn chạy từ mã nguồn được trình bày ở Phụ lục.
+
+\subsubsection{Cấu trúc mã nguồn}
+Các thành phần được tách theo trách nhiệm. \code{frontend/web/src/pages/}
+chứa các màn hình nghiệp vụ; \code{frontend/web/src/services/api.ts} là lớp
+gọi backend. \code{backend/api/src/app.js} khởi tạo ứng dụng Express và các
+route; \code{backend/api/src/routes/} chứa các nhóm API. SQL nền tảng nằm
+trong \code{database/schema.sql}; các thay đổi theo phiên bản được đặt tại
+\code{database/migrations/}.
+
+\begin{table}[H]
+\centering
+\caption{Phân chia trách nhiệm theo thư mục mã nguồn.}
+\label{tab:modules}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.29\textwidth} X}
+\toprule
+\rowcolor{gray100}Đường dẫn & Trách nhiệm trong hệ thống \\
+\midrule
+\code{frontend/web/src/pages/} & Màn hình tạo đề, câu hỏi, thi, lớp học, người dùng, chấm và thống kê. \\
+\code{frontend/web/src/services/api.ts} & Tạo yêu cầu HTTP, giữ kiểu dữ liệu API và quản lý thông tin xác thực ở phía client. \\
+\code{backend/api/src/app.js} & Khởi tạo Express, tích hợp phân tích tài liệu và đăng ký route. \\
+\code{backend/api/src/routes/} & Xác thực, câu hỏi, đề thi, phòng thi, lớp học, người dùng, bài nộp và phân tích. \\
+\code{backend/api/src/middlewares/} & Xác thực JWT và kiểm tra vai trò. \\
+\code{database/schema.sql} & Định nghĩa bảng, khoá, ràng buộc và chỉ mục chính. \\
+\code{database/migrations/} & Chuyển đổi schema cho các phiên bản chức năng. \\
+\code{docker-compose.yml} & Khai báo dịch vụ phát triển và mạng/kết nối giữa các container. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Biến cấu hình và phụ thuộc ngoài}
+Bảng~\ref{tab:config} mô tả nhóm cấu hình theo mục đích, không nêu giá trị
+bí mật. Ứng dụng có thể chạy phần sinh dự phòng mà không cấu hình API mô
+hình; chức năng Google OAuth cũng phụ thuộc thông tin client do nhà triển
+khai cấp. Hướng dẫn Node.js và Express được dùng để tham chiếu hành vi môi
+trường chạy và định tuyến \cite{NodeDocs,ExpressDocs}.
+\begin{table}[H]
+\centering
+\caption{Nhóm cấu hình cần thiết khi chạy hệ thống.}
+\label{tab:config}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.22\textwidth}p{0.33\textwidth}X}
+\toprule
+\rowcolor{gray100}Nhóm biến & Ví dụ tên biến & Mục đích / lưu ý \\
+\midrule
+API và xác thực & \code{PORT}, \code{JWT\_SECRET}, \code{JWT\_EXPIRES\_IN} & Cổng API, ký và thời hạn token; secret phải duy nhất, không dùng giá trị dev khi triển khai. \\
+Cơ sở dữ liệu & \code{DB\_HOST}, \code{DB\_PORT}, \code{DB\_NAME}, \code{DB\_USER}, \code{DB\_PASSWORD} & Kết nối PostgreSQL; mật khẩu lấy từ môi trường an toàn. \\
+Giao diện & \code{VITE\_API\_URL} & Địa chỉ gốc của API được đóng vào frontend. \\
+LLM tùy chọn & \code{OPENAI\_API\_KEY}, \code{OPENAI\_MODEL} & Gọi API sinh nội dung; khóa không được chuyển xuống trình duyệt. \\
+Đăng nhập Google & \code{GOOGLE\_CLIENT\_ID}, \code{GOOGLE\_CLIENT\_SECRET}, \code{GOOGLE\_REDIRECT\_URI} & Chỉ hoạt động khi được đăng ký/cấu hình đúng tại nhà cung cấp. \\
+Nguồn gọi API & \code{CORS\_ORIGIN}, \code{FRONTEND\_URL} & Chính sách CORS và URL chuyển hướng OAuth. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Sơ đồ triển khai các thành phần}
+Hình~\ref{fig:deployment} khái quát luồng kết nối của phiên bản hiện tại.
+Trình duyệt tải giao diện tĩnh do Nginx phục vụ, sau đó gửi yêu cầu đến API
+Express; backend truy cập PostgreSQL và chỉ gọi nhà cung cấp LLM bên ngoài
+khi đã cấu hình khóa. Các thành phần frontend, backend và cơ sở dữ liệu được
+khai báo trong Docker Compose \cite{DockerComposeDocs}; mô hình không hàm ý
+dịch vụ AI riêng biệt chạy trong Compose.
+\begin{figure}[H]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[node distance=10mm and 13mm]
+  \node[objbox] (browser) {Trình duyệt\\React};
+  \node[clsbox, right=of browser] (web) {Nginx\\tệp giao diện};
+  \node[clsbox, right=of web] (api) {Express API\\nghiệp vụ};
+  \node[clsbox, right=of api] (db) {PostgreSQL\\dữ liệu};
+  \node[clsbox, below=of api] (llm) {Dịch vụ LLM\\tuỳ cấu hình};
+  \draw[flowarr] (browser) -- node[above,font=\small] {HTTPS} (web);
+  \draw[flowarr] (web) -- node[above,font=\small] {HTTP API} (api);
+  \draw[flowarr] (api) -- node[above,font=\small] {SQL} (db);
+  \draw[flowarr,dashed] (api) -- node[right,font=\small] {HTTPS} (llm);
+\end{tikzpicture}}
+\caption{Sơ đồ triển khai logic và các kết nối chính.}
+\label{fig:deployment}
+\end{figure}
+
+\subsection{Các thành phần chính}
+
+\subsubsection{Giao diện web}
+Ứng dụng React có màn hình đăng nhập, trang tổng quan, ngân hàng câu hỏi,
+trình tạo đề, duyệt đề, quản lý người dùng, chấm bài, phân tích, thi trực
+tuyến và lớp học. Giao diện gọi các hàm tập trung trong dịch vụ API ở
+\code{frontend/web/src/services/api.ts}. Một số trang điều phối luồng cụ thể
+gồm \code{ExamBuilderPage.tsx}, \code{OnlineExamPage.tsx},
+\code{QuestionBankPage.tsx} và \code{GradingPage.tsx}.
+
+\subsubsection{API và nghiệp vụ}
+Backend Express tổ chức endpoint theo nhóm xác thực, người dùng, câu hỏi,
+đề thi, bài nộp, phân tích, phòng thi và lớp học. Middleware xác thực token
+và kiểm tra vai trò được dùng để giới hạn thao tác. Endpoint phân tích tài
+liệu tiếp nhận nội dung, gọi dịch vụ ngôn ngữ nếu cấu hình, kiểm tra đầu ra
+và trả các câu hỏi đề xuất kèm thông tin bằng chứng. Nhóm endpoint thi trực
+tuyến hỗ trợ tạo phòng, bắt đầu/tiếp tục lượt thi, lưu câu trả lời, nộp bài
+và giám sát tiến độ.
+
+\subsubsection{Lưu trữ và xử lý tài liệu}
+Lược đồ PostgreSQL lưu người dùng, câu hỏi, đề thi, phòng/lượt thi, bài nộp,
+kết quả và thành viên lớp. Các thay đổi lược đồ được quản lý bằng các tệp
+migration trong \code{database/migrations/}. Tệp tải lên được nhận trong bộ
+nhớ của backend để trích xuất nội dung; PDF dùng \code{pdf-parse}, DOC/DOCX
+được chuyển qua Mammoth và TXT được giải mã UTF-8. Backend có nhánh OCR ảnh
+dùng Tesseract.js với dữ liệu tiếng Anh, nhưng giao diện hiện không cung cấp
+đầu vào ảnh. Báo cáo không giả định tài liệu đã được lưu trữ lâu dài hay
+mọi tài liệu được trích xuất chính xác.
+
+\subsubsection{Quản lý vòng đời đề thi}
+Đề lưu trạng thái nghiệp vụ nháp, chờ duyệt, đã duyệt và phát hành cùng
+metadata như thời lượng, tổng điểm, năm học, học kỳ và ma trận câu hỏi. Khi
+lưu đề, backend kiểm tra số lượng, loại câu, điểm và thời lượng; các thao
+tác cần nhiều câu lệnh sử dụng transaction để tránh lưu dở dữ liệu giữa
+bảng đề và bảng liên kết. Câu hỏi thuộc đề được truy vấn qua
+\code{exam\_questions} theo vị trí, thay vì dựa duy nhất vào một danh sách
+ID không có ràng buộc quan hệ.
+
+\subsubsection{Quản lý phiên làm bài}
+Khi sinh viên vào phòng, API tạo hoặc lấy lại lượt thi. API lưu đáp án theo
+ID câu hỏi, danh sách câu đánh dấu, chỉ số câu hiện tại, thời hạn và thời
+điểm nộp. Khi nộp, bài thi trắc nghiệm được tự chấm; đề tự luận có thể yêu
+cầu chấm riêng. Trước khi trả câu hỏi cho sinh viên, route loại các trường
+đáp án đúng, đáp án tham khảo và bằng chứng nội bộ. Cách tách thông tin
+đáp án là kiểm soát quan trọng vì ẩn đáp án chỉ ở giao diện không đủ để
+bảo vệ bài thi.
+
+\subsubsection{Thống kê và chấm điểm}
+Trang thống kê hiển thị số liệu theo quyền người dùng; quản trị viên có
+phạm vi tổng thể, giảng viên tập trung dữ liệu liên quan đề/lớp của mình,
+còn sinh viên xem lượt dự thi. Chấm thủ công nhận điểm và phản hồi, sau đó
+lưu vào bảng \code{results}; điểm được kiểm tra không âm và không vượt tổng
+điểm của đề. Giao diện có nội dung mô tả “AI feedback”, nhưng backend được
+kiểm tra trong đồ án không chứng minh đã có pipeline tự chấm tự luận bằng
+mô hình; báo cáo chỉ ghi nhận luồng chấm do giảng viên thực hiện.
+
+\subsection{Giao diện và các luồng chính}
+
+Các màn hình triển khai bao phủ hai nhóm luồng. Giảng viên có thể quản lý
+câu hỏi, phân tích tài liệu, chọn câu để tạo đề, gửi duyệt, phát hành và
+tạo phòng thi. Sinh viên đăng nhập, tham gia bằng mã, làm bài, lưu tiến độ,
+tiếp tục lượt thi và xem kết quả. Trang giám sát của giảng viên tải lại
+tiến độ theo chu kỳ; trang lớp học quản lý mã tham gia và danh sách thành
+viên. Báo cáo hiện không kèm ảnh chụp giao diện vì thư mục dự án không có
+ảnh chụp màn hình sản phẩm phù hợp để làm minh chứng.
+
+\subsubsection{Minh hoạ bố cục khu vực tạo đề}
+Hình~\ref{fig:wireframe} là sơ đồ bố cục khái niệm được dựng để giải thích
+các vùng chức năng, không phải ảnh chụp từ trình duyệt. Nó chỉ ra các bước
+người dùng cần quan sát: cấu hình đề, nạp nguồn, chọn câu hỏi và xác nhận
+trước khi lưu.
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[rounded corners=3pt, line width=1pt, color=daunavy] (0,0) rectangle (15,8);
+  \fill[lightnavy] (0,7) rectangle (15,8);
+  \node[anchor=west,color=daunavy,font=\bfseries] at (0.4,7.5) {AI EXAMHUB DAU \hspace{1em} Tạo đề thi};
+  \fill[gray100] (0.4,0.5) rectangle (4.4,6.6);
+  \node[anchor=west,font=\bfseries,color=daunavy] at (0.7,6.15) {1. Cấu hình đề};
+  \node[anchor=west,align=left] at (2.4,5.25) {Tên đề / môn học\\Thời lượng / tổng điểm\\Loại câu / độ khó\\Mức độ nhận thức};
+  \draw[color=gray300] (0.7,3.8) -- (4.1,3.8);
+  \node[anchor=west,align=left] at (2.4,3.0) {Chọn tài liệu nguồn\\Tải PDF / DOCX / TXT};
+  \node[anchor=west,font=\bfseries,color=daunavy] at (0.7,1.35) {Phân tích tài liệu};
+  \draw[rounded corners=2pt,color=daumaroon] (4.8,4.4) rectangle (14.5,6.6);
+  \node[anchor=west,font=\bfseries,color=daunavy] at (5.2,6.15) {2. Nội dung nguồn và trích dẫn};
+  \node[anchor=west,align=left] at (9.6,5.35) {Xem văn bản đã trích xuất\\Đối chiếu đoạn bằng chứng\\Điều chỉnh thông tin môn học};
+  \draw[rounded corners=2pt,color=daumaroon] (4.8,1.0) rectangle (14.5,4.0);
+  \node[anchor=west,font=\bfseries,color=daunavy] at (5.2,3.55) {3. Danh sách câu hỏi đề xuất};
+  \node[anchor=west,align=left] at (9.6,2.4) {Câu hỏi trắc nghiệm / tự luận\\Mức độ, đáp án và căn cứ\\Chọn, bỏ hoặc hiệu chỉnh câu};
+  \fill[lightwarm] (11.4,0.3) rectangle (14.5,0.8);
+  \node[anchor=center,font=\bfseries,color=daumaroon] at (12.95,0.55) {Lưu đề};
+\end{tikzpicture}}
+\caption{Wireframe khái niệm cho các khu vực của quy trình tạo đề.}
+\label{fig:wireframe}
+\end{figure}
+
+\subsubsection{Trạng thái thông báo và lỗi}
+Trong quy trình tạo tài liệu, trạng thái giao diện cần phân biệt đang tải,
+trích xuất xong, không có nội dung đọc được, không sinh được ứng viên, đã
+sinh được ứng viên và lỗi dịch vụ. Người dùng phải biết liệu câu hỏi thuộc
+nhánh LLM hay nhánh trích xuất dự phòng nếu hệ thống trả trường đó. Lỗi
+không nên hiển thị dưới dạng thông báo thành công, và thao tác thử lại
+không được tạo bản ghi trùng ngoài ý muốn. Những tiêu chí này được đưa vào
+ma trận kiểm thử đề xuất ở Phụ lục.
+
+\subsection{Kiểm thử}
+
+Backend có bộ kiểm thử tích hợp tại \code{backend/api/tests/api.test.js}.
+Trong lần chạy phục vụ báo cáo, toàn bộ 35 bài kiểm thử đạt, không có bài
+thất bại. Các trường hợp tập trung vào đăng nhập và phân quyền, CRUD tài
+khoản/câu hỏi/đề thi, phân tích tài liệu, sinh câu hỏi khi không cấu hình
+mô hình ngoài, phòng thi trực tuyến, tiếp tục bài làm, tự chấm trắc nghiệm
+và quản lý lớp học.
+
+Frontend được kiểm tra bằng lệnh \code{npm run build}; TypeScript hoàn tất
+kiểm tra kiểu và Vite tạo gói production thành công. Kết quả này xác nhận
+build và các hành vi được kiểm thử, không phải đánh giá độ chính xác của AI,
+độ chính xác OCR, tải đồng thời hay thời gian phản hồi.
+
+\subsubsection{Tổ chức kiểm thử}
+Bộ kiểm thử API dùng Node.js test runner và chạy ứng dụng trên cổng động
+trong cùng tiến trình. Các test tạo tài khoản có vai trò, gửi HTTP request
+đến route và truy vấn PostgreSQL để xác minh dữ liệu. Phần lớn kiểm thử
+được tích hợp với database đã cấu hình trong môi trường này; do đó, người
+chạy lại cần database khả dụng và phải bảo đảm test không chạy nhầm vào
+dữ liệu production. Tài liệu của Node.js mô tả API test runner và cách
+khai báo test bất đồng bộ \cite{NodeTestDocs}.
+
+\subsubsection{Kiểm soát an toàn dữ liệu}
+Hệ thống chứa thông tin định danh tài khoản, câu trả lời và lịch sử thi.
+Nguyên tắc cần áp dụng gồm chỉ truy xuất dữ liệu theo quyền sở hữu, tránh
+ghi token/khóa vào log, mã hoá đường truyền khi triển khai, sao lưu có kiểm
+soát và quy định thời hạn lưu dữ liệu. Khi gửi tài liệu cho nhà cung cấp
+LLM, cần thông báo rõ đối tượng dữ liệu, mục đích và cơ chế lưu/huỷ. Các
+nguyên tắc này phù hợp với khung quản trị AI và an ninh ứng dụng
+\cite{NISTAIRMF,OWASPTop10,OWASPAPI,OWASPLLM}; chúng chưa được xem là đã xác
+minh nếu chưa có kiểm toán chuyên biệt.

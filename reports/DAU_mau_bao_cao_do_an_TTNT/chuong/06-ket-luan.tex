@@ -1,0 +1,51 @@
+% ---------------------------------------------------------------------
+%  NỘI DUNG CHƯƠNG 3 — KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% ---------------------------------------------------------------------
+\section{Kết luận và hướng phát triển}
+\label{sec:ketluan}
+
+\begin{muctieu}
+Phần này tổng kết phạm vi hoàn thành, bài học rút ra và các hướng phát
+triển có thể kiểm chứng cho AI ExamHub DAU.
+\end{muctieu}
+
+\subsection{Kết luận}
+
+Đồ án đã khảo sát và xây dựng nguyên mẫu AI ExamHub DAU gồm frontend React,
+API Express và cơ sở dữ liệu PostgreSQL. Hệ thống hỗ trợ quản lý câu hỏi,
+tạo đề với trợ giúp từ nội dung tài liệu, duyệt đề, tổ chức phòng thi và
+lớp học trực tuyến, lưu tiến độ làm bài và chấm câu trắc nghiệm. Bộ kiểm
+thử API đạt 35/35 ca và frontend build thành công tại môi trường kiểm tra.
+Tuy vậy, chưa có benchmark độc lập để kết luận về độ chính xác của sinh câu
+hỏi, OCR hay hiệu năng; các đầu ra AI vẫn cần con người rà soát.
+
+\subsection{Bài học rút ra}
+
+Một thành phần AI hữu ích trong sản phẩm cần nhiều hơn một lời gọi mô hình:
+cần kiểm soát nguồn vào, chuẩn hoá cấu trúc, kiểm tra đầu ra và cung cấp
+cách để người dùng xác minh. Trong hệ thống tạo đề, việc lưu bằng chứng từ
+tài liệu và giữ quyền duyệt cuối cùng cho giảng viên là các bước quan trọng
+để hạn chế việc dùng nội dung không phù hợp.
+
+Đồ án cũng cho thấy phải tách biệt kiểm thử chức năng với đánh giá mô hình.
+Một endpoint chạy đúng không chứng minh câu hỏi hay hoặc đáp án chính xác.
+Nếu tiếp tục thực hiện, cần lập bộ câu hỏi chuẩn, thống nhất tiêu chí chấm
+với giảng viên và công bố phương pháp đo trước khi cải thiện prompt hay bộ
+sinh dự phòng.
+
+\subsection{Hướng phát triển}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=3pt]
+  \item Xây dựng tập đánh giá có chuyên gia rà soát, đo mức bám nguồn, tính
+        đúng của đáp án, độ rõ ràng, độ khó và mức trùng lặp.
+  \item Hoàn thiện bộ xử lý OCR theo loại tài liệu, ngôn ngữ và chất lượng
+        ảnh; lưu lại nguồn trích xuất để người dùng kiểm chứng.
+  \item Thêm cơ chế duyệt/sửa câu hỏi AI, lịch sử phiên bản và chỉ đưa câu
+        đã được phê duyệt vào ngân hàng chính thức.
+  \item Đánh giá an toàn và quyền riêng tư khi gửi học liệu đến nhà cung cấp
+        mô hình bên ngoài; cho phép cấu hình chính sách lưu trữ dữ liệu.
+  \item Bổ sung kiểm thử tải, quan sát hệ thống và triển khai secrets an toàn;
+        thay các giá trị phát triển bằng cấu hình vận hành phù hợp.
+  \item Chỉ xem xét chấm tự luận có AI sau khi xác định rubric, bộ dữ liệu
+        đối chiếu và quy trình giảng viên xác nhận kết quả.
+\end{itemize}

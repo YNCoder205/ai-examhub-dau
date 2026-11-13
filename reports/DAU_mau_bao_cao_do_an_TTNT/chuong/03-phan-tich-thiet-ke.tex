@@ -1,0 +1,289 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 2 — PHÂN TÍCH, THIẾT KẾ VÀ TRIỂN KHAI
+% ---------------------------------------------------------------------
+\chapter{Phân tích, thiết kế và triển khai}
+\label{ch:thietke}
+
+\begin{muctieu}
+Chương này phân tích vai trò và yêu cầu, mô tả kiến trúc, dữ liệu, quy
+trình sinh câu hỏi và tổ chức thi, rồi trình bày cài đặt và thử nghiệm.
+\end{muctieu}
+
+\section{Phân tích bài toán và yêu cầu}
+
+Hệ thống có ba vai trò chính: quản trị viên quản lý tài khoản và dữ liệu
+toàn hệ thống; giảng viên quản lý câu hỏi, tài liệu, đề thi, lớp học và
+chấm bài; sinh viên tham gia lớp/phòng thi và xem lịch sử dự thi. Các yêu
+cầu chức năng trọng tâm được tóm tắt trong Bảng~\ref{tab:yeucau}.
+
+\begin{table}[H]
+\centering
+\caption{Nhóm yêu cầu chức năng của hệ thống.}
+\label{tab:yeucau}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}p{0.12\textwidth}p{0.31\textwidth}p{0.49\textwidth}}
+\toprule
+\rowcolor{gray100}\bfseries\color{daunavy}Mã & \bfseries\color{daunavy}Chức năng & \bfseries\color{daunavy}Mô tả \\
+\midrule
+FR1 & Tài khoản và phân quyền & Đăng nhập, hồ sơ người dùng và giới hạn chức năng theo vai trò. \\
+FR2 & Ngân hàng câu hỏi & Tạo, sửa, xoá, lọc và phân loại câu hỏi theo môn, loại và độ khó. \\
+FR3 & Hỗ trợ tạo đề & Đọc tài liệu, đề xuất câu hỏi, chọn phân bố, lưu đề và tạo mã đề. \\
+FR4 & Duyệt đề & Chuyển đề qua các trạng thái nháp, chờ duyệt, đã duyệt và phát hành. \\
+FR5 & Thi trực tuyến & Tạo phòng/mã tham gia, lưu câu trả lời, tiếp tục lượt thi và tự chấm trắc nghiệm. \\
+FR6 & Lớp học & Tạo lớp, tham gia bằng mã, quản lý trạng thái buổi học và thành viên. \\
+FR7 & Chấm và thống kê & Giảng viên chấm bài, ghi nhận phản hồi và xem số liệu theo quyền. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Các yêu cầu phi chức năng gồm bảo vệ API bằng xác thực và phân quyền, lưu
+dữ liệu bền vững qua PostgreSQL, kiểm tra đầu vào ở các luồng quan trọng,
+và hỗ trợ chạy các thành phần chính bằng Docker Compose. Báo cáo chưa xác
+nhận ngưỡng thời gian phản hồi hay số người dùng đồng thời; các tiêu chí đó
+cần được đo riêng trước triển khai.
+
+\subsection{Tác nhân và kịch bản sử dụng}
+Các tác nhân tương tác với hệ thống qua giao diện web. Quản trị viên tạo và
+quản lý tài khoản, phân quyền và xem số liệu toàn hệ thống. Giảng viên nạp
+học liệu, xem các câu hỏi được đề xuất, hiệu chỉnh câu hỏi, lưu thành ngân
+hàng, tạo/duyệt đề, mở phòng thi, giám sát, chấm bài và xem phân tích.
+Sinh viên đăng nhập hoặc tham gia lớp/phòng thi theo quyền, trả lời câu
+hỏi, đánh dấu nội dung cần xem lại và nộp bài. Một lượt dự thi được gắn với
+phòng, đề và tài khoản sinh viên.
+
+Bảng~\ref{tab:usecase} mô tả một số kịch bản trọng yếu. Kịch bản thể hiện
+hành vi mong muốn của sản phẩm; các bước được triển khai đến đâu được đánh
+giá riêng trong Chương~\ref{ch:ketqua}.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các kịch bản sử dụng chính.}
+\label{tab:usecase}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.16\textwidth} X X}
+\toprule
+\rowcolor{gray100}Kịch bản & Luồng chính & Kết quả / ngoại lệ cần xử lý \\
+\midrule
+UC1 -- Sinh câu hỏi & Giảng viên chọn tài liệu, môn học, số lượng, dạng câu và phân bố; gửi phân tích; xem ứng viên, bằng chứng và hiệu chỉnh. & Ứng viên có nguồn để đối chiếu; từ chối tài liệu rỗng, lỗi đọc hoặc đầu ra không hợp lệ. \\
+UC2 -- Tạo/phát hành đề & Chọn câu hỏi; khai báo thời lượng, thang điểm và metadata; lưu nháp; gửi duyệt; phê duyệt và phát hành. & Đề lưu kèm liên kết câu hỏi; lỗi ma trận không đủ câu phải được thông báo. \\
+UC3 -- Tổ chức thi & Giảng viên chọn đề, đặt thời gian, tạo mã; sinh viên nhập mã, làm bài, lưu và nộp. & Một sinh viên tiếp tục đúng lượt thi đã bắt đầu; bài nộp được tự chấm trắc nghiệm. \\
+UC4 -- Chấm tự luận & Giảng viên chọn bài đã nộp, nhập điểm trong giới hạn và phản hồi, lưu kết quả. & Kết quả gắn với bài nộp; không cho điểm vượt tổng điểm đề. \\
+UC5 -- Tham gia lớp & Giảng viên tạo lớp, chọn kiểu kết nối; sinh viên nhập mã; giảng viên mở/đóng buổi học. & Thành viên được lưu; lớp đã kết thúc hoặc đóng nhận thành viên thì từ chối lượt vào mới. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.9\textwidth}{!}{%
+\begin{tikzpicture}[node distance=8mm and 12mm]
+  \node[objbox] (teacher) {Giảng viên};
+  \node[objbox, below=of teacher] (student) {Sinh viên};
+  \node[objbox, above=of teacher] (admin) {Quản trị viên};
+  \node[clsbox, right=of teacher] (bank) {Quản lý ngân hàng\\câu hỏi};
+  \node[clsbox, right=of bank] (exam) {Tạo / duyệt\\đề thi};
+  \node[clsbox, right=of exam] (room) {Thi và giám sát\\phòng thi};
+  \node[clsbox, below=of exam] (classroom) {Lớp học\\trực tuyến};
+  \node[clsbox, below=of bank] (grading) {Chấm bài\\và thống kê};
+  \draw[flowarr] (teacher) -- (bank);
+  \draw[flowarr] (teacher) -- (exam);
+  \draw[flowarr] (teacher) -- (room);
+  \draw[flowarr] (teacher) -- (grading);
+  \draw[flowarr] (teacher) -- (classroom);
+  \draw[flowarr] (student) -- (room);
+  \draw[flowarr] (student) -- (classroom);
+  \draw[flowarr] (student) -- (grading);
+  \draw[flowarr] (admin) -- (bank);
+  \draw[flowarr] (admin) -- (exam);
+  \draw[flowarr] (admin) -- (room);
+\end{tikzpicture}}
+\caption{Quan hệ giữa các vai trò và nhóm chức năng ở mức use case.}
+\label{fig:use-case}
+\end{figure}
+Hình~\ref{fig:use-case} chỉ thể hiện nhóm chức năng theo vai trò, không thay
+thế bảng endpoint hoặc chính sách phân quyền chi tiết.
+
+\subsection{Yêu cầu phi chức năng và tiêu chí nghiệm thu}
+Yêu cầu phi chức năng được phân thành an toàn, toàn vẹn dữ liệu, khả dụng,
+dễ vận hành và khả năng tiếp cận. Trạng thái đạt/đo được trình bày ở
+Bảng~\ref{tab:nfr}; các ngưỡng chưa đo không được xem là đã thoả mãn.
+\begin{table}[H]
+\centering
+\caption{Yêu cầu phi chức năng và mức xác minh hiện có.}
+\label{tab:nfr}
+\begin{tabularx}{\textwidth}{>{\bfseries\color{daunavy}}p{0.20\textwidth} X p{0.23\textwidth}}
+\toprule
+\rowcolor{gray100}Thuộc tính & Tiêu chí yêu cầu & Bằng chứng hiện có \\
+\midrule
+Phân quyền & Mỗi thao tác ghi dữ liệu chỉ được phép với vai trò và chủ sở hữu thích hợp. & Có middleware và test phân quyền; chưa có kiểm thử độc lập đầy đủ. \\
+Toàn vẹn & Khóa ngoại, ràng buộc, giao dịch tạo đề/phòng và tính duy nhất. & Có schema, migration và transaction ở các luồng chính. \\
+Khả dụng & Lỗi dịch vụ ngoài không được biến thành kết quả thành công giả. & Có fallback cho sinh nội dung; cần kiểm tra log và UX ở triển khai thật. \\
+Hiệu năng & Giao diện và API đáp ứng thời gian chấp nhận được ở tải mục tiêu. & Chưa có ngưỡng hoặc đo tải. \\
+Khả năng tiếp cận & Điều khiển bằng bàn phím, nhãn biểu mẫu, trạng thái và tương phản phù hợp. & Chưa thực hiện đánh giá WCAG có hệ thống~\cite{WCAG22}. \\
+Quản lý dữ liệu & Hạn chế dữ liệu cá nhân/tài liệu gửi cho bên thứ ba; quy định lưu trữ và xoá. & Chưa có kiểm toán quyền riêng tư hoặc chính sách vận hành hoàn chỉnh. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Thiết kế kiến trúc hệ thống}
+
+Kiến trúc triển khai được trình bày ở Hình~\ref{fig:kientruc}. Frontend
+React gửi yêu cầu HTTP đến REST API Express; backend áp dụng xác thực,
+nghiệp vụ và truy vấn PostgreSQL. Luồng tài liệu đi qua bộ trích xuất văn
+bản, sau đó có thể gọi dịch vụ mô hình ngôn ngữ ngoài hoặc bộ sinh dự phòng.
+Các thư mục \code{ai-services/} và \code{ml-models/} hiện là khung tổ chức,
+không phải các dịch vụ độc lập đang được gọi trong luồng runtime.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=12mm and 14mm]
+  \node[objbox] (user) {Giảng viên /\\ sinh viên / admin};
+  \node[clsbox, right=of user] (web) {Frontend\\ React + TypeScript};
+  \node[clsbox, right=of web] (api) {REST API\\ Node.js + Express};
+  \node[clsbox, right=of api] (db) {PostgreSQL\\ users, exams, attempts};
+  \node[clsbox, below=of api] (doc) {Trích xuất văn bản\\ PDF / DOCX / OCR};
+  \node[objbox, right=of doc] (ai) {OpenAI API tùy chọn\\ hoặc bộ sinh dự phòng};
+  \draw[flowarr] (user) -- (web);
+  \draw[flowarr] (web) -- (api);
+  \draw[flowarr] (api) -- (db);
+  \draw[flowarr] (api) -- (doc);
+  \draw[flowarr] (doc) -- (ai);
+  \draw[flowarr] (ai.north) |- (api.south);
+\end{tikzpicture}}
+\caption{Kiến trúc logic và luồng xử lý chính của AI ExamHub DAU.}
+\label{fig:kientruc}
+\end{figure}
+
+\subsection{Phân rã thành phần}
+Frontend đóng vai trò client hiển thị view theo vai trò và gọi các hàm
+trong lớp dịch vụ API. Backend tập trung xử lý các quy tắc miền, xác thực
+JWT, kiểm tra vai trò, thao tác cơ sở dữ liệu và tích hợp mô hình ngoài.
+PostgreSQL giữ dữ liệu nghiệp vụ; Docker Compose nối backend, frontend và
+cơ sở dữ liệu trong môi trường phát triển. Các module OCR/RAG/embedding
+trong cây thư mục dự án là vị trí quy hoạch cho tương lai, không đồng nghĩa
+các container AI này đã tồn tại trong cấu hình Compose hiện tại.
+
+\subsection{Luồng xử lý phân tích tài liệu}
+Luồng phân tích nhận \code{documentId}, môn học, số lượng, nội dung, ma
+trận loại câu, phân bố độ khó và mức độ nhận thức. Backend từ chối nội
+dung rỗng; nếu có nội dung, bộ phân tích tách các câu hỏi được định dạng
+sẵn, đồng thời gọi bộ sinh từ tài liệu. Các ứng viên được hợp nhất, chuẩn
+hoá và lọc theo ma trận. Những câu phù hợp được lưu vào ngân hàng câu hỏi
+trước khi trả về giao diện. Mô hình dữ liệu do đó phân biệt việc phân tích
+đề xuất với việc người dùng chọn câu để tạo đề hoàn chỉnh.
+
+\subsection{Luồng thi trực tuyến}
+Giảng viên tạo phòng từ một hoặc nhiều đề đã lưu. Mã phòng được tạo ngẫu
+nhiên; sinh viên dùng mã để bắt đầu lượt thi. Backend ghi một lượt cho
+cặp phòng--sinh viên, bộ câu hỏi được giao, đáp án, câu đánh dấu, vị trí
+hiện tại, thời hạn và thời điểm nộp. Khi nộp, bài thi trắc nghiệm được
+tự chấm; đề tự luận có thể yêu cầu chấm riêng. Giảng viên có thể xem tiến
+độ và sự kiện chuyển tab được ghi lại. Sự kiện chuyển tab là tín hiệu hỗ
+trợ giám sát, không đủ để tự kết luận có gian lận.
+
+\section{Thiết kế dữ liệu}
+
+Hệ thống không sử dụng tập dữ liệu huấn luyện phân lớp. Dữ liệu nghiệp vụ
+gồm tài khoản, câu hỏi, đề thi, lượt dự thi, bài nộp, kết quả và lớp học.
+Các bảng lõi được mô tả khái quát ở Bảng~\ref{tab:dulieu}; các trường chi
+tiết được khai báo trong lược đồ PostgreSQL của dự án.
+
+\begin{table}[H]
+\centering
+\caption{Các thực thể chính trong cơ sở dữ liệu.}
+\label{tab:dulieu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{0.19\textwidth}>{\color{daumaroon}}p{0.28\textwidth}p{0.43\textwidth}}
+\toprule
+\rowcolor{gray100}\bfseries\color{daunavy}Thực thể & \bfseries\color{daumaroon}Bảng & \bfseries\color{daunavy}Vai trò \\
+\midrule
+Tài khoản & users & Email, vai trò, hồ sơ và thông tin định danh. \\
+Câu hỏi & questions & Nội dung, lựa chọn, đáp án, bằng chứng nguồn và rubric. \\
+Đề thi & exams, exam\_questions & Metadata đề và liên kết có thứ tự tới câu hỏi. \\
+Thi trực tuyến & exam\_rooms, exam\_attempts & Phòng thi, câu hỏi được giao, đáp án và thời điểm. \\
+Bài nộp/kết quả & submissions, results & Trạng thái nộp, điểm số và phản hồi. \\
+Lớp học & classroom\_rooms, classroom\_members & Buổi học, mã tham gia và thành viên. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{Sơ đồ thực thể--liên kết}
+Các quan hệ lõi trong schema được tóm tắt tại Hình~\ref{fig:erd}. Người
+dùng tạo câu hỏi/đề/phòng/lớp; đề liên kết đến câu hỏi qua bảng nối; lượt
+thi thuộc về một sinh viên, một phòng và một đề; bài nộp liên kết với kết
+quả. Bảng lớp học nối người dùng sinh viên với phòng học bằng khoá ghép.
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=10mm and 13mm]
+  \node[clsbox] (users) {users};
+  \node[clsbox, right=of users] (questions) {questions};
+  \node[clsbox, right=of questions] (exams) {exams};
+  \node[objbox, below=of questions] (examq) {exam\_questions};
+  \node[clsbox, below=of exams] (rooms) {exam\_rooms};
+  \node[objbox, right=of rooms] (roomexams) {exam\_room\_exams};
+  \node[clsbox, below=of rooms] (attempts) {exam\_attempts};
+  \node[clsbox, left=of attempts] (submissions) {submissions};
+  \node[clsbox, left=of submissions] (results) {results};
+  \node[objbox, below=of users] (rubrics) {rubrics};
+  \node[clsbox, below=of attempts] (classrooms) {classroom\_rooms};
+  \node[objbox, left=of classrooms] (members) {classroom\_members};
+  \draw[flowarr] (users) -- (questions);
+  \draw[flowarr] (users) |- (exams);
+  \draw[flowarr] (questions) -- (examq);
+  \draw[flowarr] (exams) -- (examq);
+  \draw[flowarr] (exams) -- (rooms);
+  \draw[flowarr] (rooms) -- (roomexams);
+  \draw[flowarr] (exams) -- (roomexams);
+  \draw[flowarr] (rooms) -- (attempts);
+  \draw[flowarr] (exams) -- (attempts);
+  \draw[flowarr] (users) |- (attempts);
+  \draw[flowarr] (attempts) -- (submissions);
+  \draw[flowarr] (submissions) -- (results);
+  \draw[flowarr] (exams) |- (rubrics);
+  \draw[flowarr] (users) |- (classrooms);
+  \draw[flowarr] (classrooms) -- (members);
+  \draw[flowarr] (users) |- (members);
+\end{tikzpicture}}
+\caption{Sơ đồ quan hệ giữa các nhóm bảng nghiệp vụ chính.}
+\label{fig:erd}
+\end{figure}
+
+\section{Thiết kế mô hình hoặc cơ sở tri thức}
+
+Thành phần tạo câu hỏi có hai nhánh. Nhánh mô hình ngôn ngữ được gọi qua
+OpenAI API khi cấu hình \code{OPENAI\_API\_KEY}; yêu cầu đầu ra gồm loại câu,
+nội dung, lựa chọn, đáp án, giải thích và bằng chứng nguồn. Backend kiểm tra
+định dạng, ràng buộc lựa chọn và mức độ bám nguồn trước khi nhận câu. Nhánh
+dự phòng tách nội dung thành các đoạn/câu, nhận diện các mẫu kiến thức và
+tạo câu hỏi theo quy tắc; nhánh này giữ hệ thống hoạt động khi dịch vụ ngoài
+không sẵn sàng nhưng có phạm vi suy luận hạn chế.
+
+Ở giai đoạn tạo đề, câu hỏi được lọc theo loại, độ khó và mức độ tư duy rồi
+lưu cùng metadata đề trong cơ sở dữ liệu. Khi tạo nhiều mã đề, backend xáo
+trộn thứ tự câu/lựa chọn và ánh xạ lại đáp án. Trong lúc thi, mỗi sinh viên
+được gắn với một bộ câu hỏi cho lượt thi, câu trả lời và vị trí hiện tại
+được lưu để hỗ trợ tiếp tục bài làm. Trắc nghiệm được tự chấm theo đáp án;
+tự luận được đưa qua quy trình giảng viên chấm và ghi phản hồi.
+
+\subsection{Thiết kế phân quyền}
+Chính sách quyền được áp dụng theo vai trò và một số trường hợp theo quyền
+sở hữu bản ghi. Admin quản lý dữ liệu toàn hệ thống; giảng viên thực hiện
+chức năng giáo viên và tài nguyên do mình quản lý; sinh viên chỉ thao tác
+với lượt thi/lớp mà mình được phép truy cập. Một token xác thực chỉ xác
+nhận danh tính; backend còn phải kiểm tra quyền của tài nguyên cụ thể. RFC
+7519 định nghĩa cấu trúc JWT, nhưng việc sử dụng token an toàn phụ thuộc
+vào thuật toán, thời hạn, kiểm tra claim, bảo vệ khóa và thu hồi phiên
+\cite{RFC7519}. Đăng nhập Google cần xác thực luồng OAuth/OpenID Connect,
+kiểm tra trạng thái/redirect và liên kết tài khoản đúng theo danh tính đã
+xác minh \cite{GoogleOIDC}.
+
+\subsection{Bảo vệ API và thành phần AI}
+OWASP Top 10 và OWASP API Security Top 10 nêu các nhóm rủi ro như kiểm soát
+truy cập sai, lỗi xác thực, cấu hình không an toàn và khai thác tài nguyên
+\cite{OWASPTop10,OWASPAPI}. Với mô hình ngôn ngữ, OWASP LLM Top 10 nhấn mạnh
+prompt injection, rò rỉ thông tin và đầu ra không được kiểm soát
+\cite{OWASPLLM}. Ở hệ thống thi, chính sách thực tế cần kiểm tra quyền sở
+hữu từng đề/phòng, không trả đáp án đúng cho sinh viên trong khi thi, giới
+hạn kích thước/định dạng tải lên, lưu khóa API ở secret store, giảm thiểu
+nội dung nhạy cảm gửi ra mô hình và xem đầu ra mô hình như dữ liệu không
+tin cậy. Phân tích này là yêu cầu thiết kế và không phải kết quả kiểm thử
+xâm nhập.

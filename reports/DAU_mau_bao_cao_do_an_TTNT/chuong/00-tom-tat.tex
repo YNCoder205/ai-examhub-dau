@@ -1,0 +1,26 @@
+% ---------------------------------------------------------------------
+%  TÓM TẮT
+% ---------------------------------------------------------------------
+\begin{abstract}
+
+AI ExamHub DAU là nền tảng web hỗ trợ giảng viên quản lý ngân hàng câu hỏi,
+tạo đề từ tài liệu học tập và tổ chức thi trực tuyến cho sinh viên. Hệ thống
+được xây dựng theo kiến trúc web gồm giao diện React và TypeScript, API
+Node.js/Express và cơ sở dữ liệu PostgreSQL. Tài liệu PDF, DOC/DOCX và TXT
+được tiếp nhận để trích xuất văn bản; khi cấu hình khóa dịch vụ, hệ thống có
+thể yêu cầu mô hình ngôn ngữ tạo câu hỏi, còn khi không có dịch vụ thì sử
+dụng bộ sinh dự phòng dựa trên nội dung nguồn. Giảng viên có thể chọn loại
+câu hỏi, độ khó, mức độ tư duy, rà soát căn cứ trích dẫn, lập quy trình duyệt
+đề và tạo phòng thi. Sinh viên tham gia bằng mã phòng, lưu và tiếp tục bài
+làm; hệ thống tự chấm câu trắc nghiệm và cho phép giảng viên chấm tự luận.
+Quá trình kiểm chứng gồm 35 bài kiểm thử API, đều đạt, cùng một lượt build
+TypeScript/Vite thành công. Đây là bằng chứng kiểm thử chức năng và build,
+không phải phép đo độ chính xác của AI: đồ án chưa có tập dữ liệu chuẩn hay
+benchmark độc lập để định lượng chất lượng câu hỏi, OCR hoặc hiệu năng. Kết
+quả là một nguyên mẫu tích hợp được quy trình tạo đề và thi, đồng thời làm
+rõ các phần cần tiếp tục đánh giá trước khi triển khai thực tế.
+
+\vspace{0.8em}
+\noindent\textbf{Từ khoá:} tạo câu hỏi, xử lý tài liệu, thi trực tuyến,
+React, Express, PostgreSQL.
+\end{abstract}

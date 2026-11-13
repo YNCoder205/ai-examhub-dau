@@ -1,0 +1,200 @@
+% ---------------------------------------------------------------------
+%  NỘI DUNG CHƯƠNG 1 — CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+% ---------------------------------------------------------------------
+\section{Cơ sở lý thuyết và công nghệ}
+\label{sec:coso}
+
+\begin{muctieu}
+Phần này giới thiệu quy trình sinh câu hỏi từ tài liệu, các thành phần xử
+lý dữ liệu và công nghệ thực tế trong hệ thống.
+\end{muctieu}
+
+\subsection{Kiến thức nền tảng}
+
+Trong phạm vi đồ án, AI được dùng để hỗ trợ suy luận và sinh nội dung từ
+học liệu qua mô hình ngôn ngữ, không phải để huấn luyện một bộ phân lớp mới.
+Các khái niệm về tác tử và hệ thống trí tuệ nhân tạo được tham chiếu từ giáo
+trình nền tảng~\cite{RussellNorvig2021}.
+
+\subsubsection{Sinh câu hỏi có điều kiện theo nguồn}
+Sinh câu hỏi từ tài liệu là quá trình chuyển nội dung văn bản thành câu hỏi
+và đáp án dựa trên các ý trong nguồn. Đầu vào của AI ExamHub DAU là nội dung
+đã trích xuất cùng môn học, số lượng, loại câu và phân bố độ khó/mức độ tư
+duy. Kết quả được chuẩn hoá thành các trường như nội dung câu hỏi, lựa chọn,
+đáp án, giải thích và đoạn bằng chứng. Gắn bằng chứng nguồn giúp giảng viên
+đối chiếu đề xuất với học liệu trước khi lưu vào ngân hàng.
+
+Khi có cấu hình khóa OpenAI, backend gửi yêu cầu đến dịch vụ mô hình ngôn
+ngữ. Đây là suy luận qua API, không phải mô hình do đồ án huấn luyện. Khi
+không có khóa hoặc phản hồi không dùng được, backend chuyển sang bộ sinh dự
+phòng dựa trên các câu/đoạn trong tài liệu. Bộ dự phòng giúp luồng có thể
+hoạt động mà không phụ thuộc dịch vụ ngoài, nhưng không đảm bảo chất lượng
+ngữ nghĩa tương đương người biên soạn.
+
+\subsubsection{Mô hình ngôn ngữ và sinh theo chỉ dẫn}
+Mô hình ngôn ngữ ước lượng chuỗi từ tiếp theo dựa trên ngữ cảnh đã nhận.
+Nhờ huấn luyện trên lượng văn bản lớn, một mô hình có thể làm theo chỉ dẫn
+và tạo đầu ra với nhiều dạng cấu trúc; nghiên cứu về mô hình ngôn ngữ few-shot
+mô tả khả năng điều kiện hoá đầu ra từ ví dụ trong ngữ cảnh
+\cite{Brown2020}. Khả năng tạo câu tự nhiên không tự chứng minh nội dung là
+đúng. Mô hình có thể diễn đạt trôi chảy nhưng suy luận sai, bỏ qua điều kiện
+hoặc tự bổ sung chi tiết không có căn cứ.
+
+Vì vậy, yêu cầu gửi đến mô hình cần làm rõ vai trò, nội dung nguồn, ma trận
+câu hỏi, định dạng đầu ra, quy tắc đáp án và yêu cầu trích nguyên văn đoạn
+bằng chứng. Ràng buộc cấu trúc giúp backend có thể phân tích JSON và từ
+chối đầu ra sai định dạng, nhưng một JSON hợp lệ vẫn có thể chứa kiến thức
+sai. Quy trình sản xuất cần có bước kiểm duyệt chuyên môn trước khi phát
+hành.
+
+\subsubsection{Sinh có truy xuất và khả năng truy nguyên}
+Một hướng nghiên cứu liên quan là kết hợp mô hình sinh với truy xuất tri
+thức bên ngoài. Retrieval-Augmented Generation (RAG) kết nối bộ sinh với
+kho tri thức để cung cấp thông tin và dấu vết nguồn cho câu trả lời
+\cite{Lewis2020RAG}. Trong nguyên mẫu hiện tại, backend đưa nội dung tài
+liệu được người dùng gửi trực tiếp vào yêu cầu, rồi yêu cầu trả
+\code{sourceEvidence}; dự án chưa có kho embedding/vector, bộ truy hồi theo
+ngữ nghĩa hay pipeline RAG độc lập. Do đó, thuật ngữ “có căn cứ theo tài
+liệu” ở đây mô tả điều kiện prompt và trích dẫn nguồn, không khẳng định
+kiến trúc RAG đã được triển khai.
+
+\subsubsection{Độ khó và mức độ nhận thức}
+Độ khó của câu hỏi không chỉ phụ thuộc độ dài câu. Câu hỏi nhận biết/hiểu
+thường yêu cầu giải thích hoặc nhận diện khái niệm; câu vận dụng yêu cầu
+dùng quy tắc trong tình huống. Hệ thống lưu mức độ nhận thức
+\code{understanding} hoặc \code{application} và các nhãn độ khó, đồng thời
+cho phép giảng viên đặt số lượng mong muốn. Các nhãn trong metadata là đầu
+vào của quá trình chọn câu hỏi, không phải kết quả đã được hiệu chuẩn theo
+một thang đo tâm lý lượng.
+
+\subsubsection{Chất lượng câu hỏi trắc nghiệm}
+Câu trắc nghiệm cần có một đáp án đúng duy nhất, phương án nhiễu cùng phạm
+trù và không vô lý, lời dẫn rõ ràng, tránh manh mối hình thức và tránh phụ
+thuộc vào kiến thức ngoài phạm vi môn học. Bộ sinh của dự án kiểm tra một
+số ràng buộc như số lượng/tính khác nhau của lựa chọn và khả năng đối chiếu
+bằng chứng. Những kiểm tra này không xác định đầy đủ tính đúng đắn chuyên
+môn hay chất lượng sư phạm, nên việc duyệt của giảng viên vẫn là một thành
+phần bắt buộc của quy trình sử dụng an toàn.
+
+\subsubsection{Trích xuất nội dung và OCR}
+PDF được đọc bằng \code{pdf-parse}; DOC/DOCX được chuyển qua Mammoth, vốn
+được thiết kế chủ yếu cho DOCX; TXT được đọc theo UTF-8. Backend cũng có
+nhánh OCR ảnh dùng Tesseract.js, khởi tạo với dữ liệu ngôn ngữ tiếng Anh.
+Giao diện hiện chỉ cho tải PDF, DOC/DOCX và TXT nên nhánh ảnh chưa phải
+luồng tải lên thông thường. Văn bản quét, DOC không tương thích, bố cục phức
+tạp hoặc tài liệu tiếng Việt đi qua bộ nhận dạng tiếng Anh có thể làm sai
+ký tự và ranh giới câu; nội dung trích xuất cần được rà soát trước khi dùng.
+
+\subsubsection{Mammoth và Tesseract.js}
+Mammoth tập trung vào việc chuyển DOCX sang HTML/văn bản, còn Tesseract.js
+cung cấp giao diện OCR JavaScript cho ảnh. Việc có thư viện trong backend
+không đồng nghĩa chất lượng trích xuất tiếng Việt đã được bảo đảm; chất
+lượng cần được đo riêng trên tập tài liệu phù hợp
+\cite{MammothDocs,TesseractDocs}.
+
+\subsubsection{Kiểm tra kết quả sinh}
+Kết quả mô hình không được đưa thẳng vào đề. Backend chuẩn hoá và kiểm tra
+các trường, loại câu, số lựa chọn, tính duy nhất của lựa chọn và đáp án,
+mức độ tư duy, độ khó, đồng thời đối chiếu bằng chứng với văn bản nguồn. Nếu
+kết quả không đạt điều kiện, hệ thống dùng kết quả dự phòng hoặc loại câu
+không hợp lệ. Đây là kiểm tra cấu trúc và một số ràng buộc nội dung; nó
+không thay thế việc giảng viên thẩm định kiến thức.
+
+\subsubsection{Mô hình rủi ro và trách nhiệm sử dụng}
+Khung quản trị rủi ro AI của NIST tổ chức hoạt động quanh các chức năng
+quản trị, lập bản đồ, đo lường và quản lý rủi ro
+\cite{NISTAIRMF}. Hướng dẫn UNESCO về AI tạo sinh trong giáo dục nhấn mạnh
+cách tiếp cận lấy con người làm trung tâm, độ tuổi phù hợp và bảo vệ dữ
+liệu cá nhân \cite{UNESCOGenAI}. Từ góc nhìn hệ thống, rủi ro chính gồm câu
+hỏi sai đáp án, dữ liệu nguồn nhạy cảm bị gửi ra ngoài, OCR sai, lạm dụng
+tài khoản và phân quyền sai. Biện pháp đề xuất là giảm thiểu dữ liệu gửi
+đi, giới hạn quyền, không dùng đầu ra AI làm kết quả cuối cùng nếu chưa
+được rà soát, và ghi rõ dịch vụ bên ngoài có thể nhận nội dung tài liệu.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[node distance=8mm and 10mm]
+  \node[objbox] (source) {Tài liệu\\ PDF/DOCX/TXT};
+  \node[clsbox, right=of source] (extract) {Trích xuất\\ văn bản};
+  \node[clsbox, right=of extract] (prompt) {Đặt yêu cầu\\ + ma trận đề};
+  \node[clsbox, right=of prompt] (generate) {LLM tùy chọn\\ / sinh dự phòng};
+  \node[clsbox, below=of generate] (validate) {Kiểm tra cấu trúc,\\ đáp án, bằng chứng};
+  \node[objbox, left=of validate] (review) {Giảng viên\\ rà soát / sửa};
+  \node[objbox, left=of review] (bank) {Ngân hàng\\ câu hỏi};
+  \draw[flowarr] (source) -- (extract);
+  \draw[flowarr] (extract) -- (prompt);
+  \draw[flowarr] (prompt) -- (generate);
+  \draw[flowarr] (generate) -- (validate);
+  \draw[flowarr] (validate) -- (review);
+  \draw[flowarr] (review) -- (bank);
+\end{tikzpicture}}
+\caption{Quy trình khai thác tài liệu và rà soát câu hỏi trong hệ thống.}
+\label{fig:ai-pipeline}
+\end{figure}
+Hình~\ref{fig:ai-pipeline} mô tả luồng logic; kết quả của bước kiểm tra
+tự động chỉ là cổng cấu trúc ban đầu. Phê duyệt nội dung vẫn thuộc trách
+nhiệm giảng viên.
+
+\subsection{Công cụ và thư viện}
+
+\begin{table}[H]
+\centering
+\caption{Công nghệ được khai báo trong các manifest và cấu hình triển khai.}
+\label{tab:congcu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{0.20\textwidth}>{\color{daumaroon}}p{0.23\textwidth}p{0.47\textwidth}}
+\toprule
+\rowcolor{gray100}\bfseries\color{daunavy}Thành phần & \bfseries\color{daumaroon}Phiên bản & \bfseries\color{daunavy}Vai trò \\
+\midrule
+React & 18.3.1 & Xây dựng giao diện web \\
+TypeScript & 5.6.3 & Kiểm tra kiểu cho mã giao diện \\
+Vite & 5.4.11 & Phát triển và đóng gói frontend \\
+Node.js & 20 (Docker) & Môi trường chạy backend \\
+Express & 5.1.0 & Xây dựng REST API \\
+PostgreSQL & 16 (Docker) & Lưu trữ dữ liệu quan hệ \\
+Tesseract.js & 7.x & Thành phần OCR được khai báo trong backend \\
+pdf-parse, Mammoth & Theo package.json & Đọc PDF và DOCX \\
+Docker Compose & Theo môi trường cài đặt & Khởi chạy các container phát triển \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{Tài liệu nền tảng và công nghệ liên quan}
+
+Các mô hình ngôn ngữ hiện đại có thể sinh văn bản theo chỉ dẫn, nhưng đầu ra
+có thể chứa thông tin sai hoặc không bám sát nguồn. Vì vậy, hệ thống ứng
+dụng nguyên tắc có điều kiện theo tài liệu, yêu cầu bằng chứng và kiểm tra
+đầu ra trước khi giảng viên duyệt; tài liệu API mô hình là nguồn tham khảo
+cho cách tích hợp dịch vụ suy luận~\cite{OpenAIAPI}. Nền tảng còn sử dụng
+các thành phần ứng dụng web và cơ sở dữ liệu đã được chuẩn hoá trong tài
+liệu chính thức của React, Express và PostgreSQL~\cite{ReactDocs,TypeScriptDocs,ViteDocs,ExpressDocs,PostgreSQLDocs}.
+Khác với một nghiên cứu mô hình học máy, đồ án tập trung vào tích hợp các
+luồng nghiệp vụ và không đưa ra so sánh benchmark giữa các mô hình.
+
+\subsubsection{Cơ sở dữ liệu quan hệ và tính toàn vẹn}
+PostgreSQL hỗ trợ khoá chính, khoá ngoại, ràng buộc và giao dịch, phù hợp
+với các quan hệ giữa tài khoản, đề, câu hỏi, lượt thi và bài nộp
+\cite{PostgreSQLDocs}. Câu hỏi và câu trả lời được biểu diễn dưới dạng JSONB
+ở một số cột để giữ lựa chọn và đáp án theo cấu trúc linh hoạt; những liên
+kết cần truy vấn và toàn vẹn tham chiếu vẫn có bảng liên kết riêng. Cách
+phân chia này tạo thuận lợi cho metadata, nhưng cần tránh để hai biểu diễn
+\code{question\_ids} và \code{exam\_questions} sai khác nhau.
+
+\subsubsection{Giao diện thành phần và hợp đồng HTTP}
+React tổ chức giao diện thành các component có trạng thái cục bộ và props
+\cite{ReactDocs}; TypeScript bổ sung kiểu dữ liệu tĩnh cho mô hình người
+dùng, câu hỏi, đề và lượt thi \cite{TypeScriptDocs}. Vite cung cấp máy chủ
+phát triển và quy trình build tài nguyên frontend
+\cite{ViteDocs}. Backend dùng Node.js và Express để khai báo middleware,
+xác thực và tuyến HTTP \cite{NodeDocs,ExpressDocs}. Những công nghệ này
+giảm công sức tích hợp, nhưng vẫn cần hợp đồng API nhất quán, xử lý lỗi và
+quyền truy cập ở backend.
+
+\subsubsection{Kiểm thử phần mềm và khả năng tái lập}
+Bộ kiểm thử backend sử dụng module \code{node:test} có sẵn trong Node.js;
+test runner cung cấp cách tổ chức và thực thi các test đồng bộ hoặc bất
+đồng bộ \cite{NodeTestDocs}. Compose mô tả dịch vụ backend, frontend và cơ
+sở dữ liệu trong một cấu hình để có thể dựng lại stack
+\cite{DockerComposeDocs}. Kết quả kiểm thử chỉ có ý nghĩa đối với phiên bản
+mã, cấu hình và môi trường đã chạy; vì vậy khi tái lập cần ghi lại commit,
+phiên bản Node.js, biến môi trường đã che bí mật và tình trạng cơ sở dữ liệu.
