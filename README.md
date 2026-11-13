@@ -19,6 +19,10 @@ Hệ thống AI tạo đề, tổ chức thi, chấm thi và quản lý lớp h�
 - devops: Docker/Kubernetes/monitoring
 - storage: uploads, results, temp
 
+## Báo cáo đồ án
+- PDF: [reports/DAU_mau_bao_cao_do_an_TTNT/do-an.pdf](reports/DAU_mau_bao_cao_do_an_TTNT/do-an.pdf)
+- Mã nguồn LaTeX và hướng dẫn: [reports/DAU_mau_bao_cao_do_an_TTNT/](reports/DAU_mau_bao_cao_do_an_TTNT/)
+
 ## Chạy local
 
 ### 1) Backend
